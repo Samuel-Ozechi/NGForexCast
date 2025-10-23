@@ -1,35 +1,26 @@
-import requests
+# src/data/load_forexDB.py
 import os
-from dotenv import load_dotenv
+import requests
+import psycopg2
 from datetime import datetime
+from dotenv import load_dotenv
 
-load_dotenv()
-
-import pandas as pd
-from pathlib import Path
-
-RAW = Path("data/01_raw/usd_ngn_rates.csv")
-
-# read everything as text to avoid parsing surprises
-df = pd.read_csv(RAW, dtype=str)
-
-# normalize column names
-df.columns = df.columns.str.strip()
-
-# parse Date (day-first format like "23/10/2025"), keep invalid as NaT
-df["Date"] = pd.to_datetime(df["Date"], dayfirst=True, errors="coerce")
-
-# clean Rate: remove thousands separators/quotes/whitespace then convert to float
-df["Rate"] = (
-    df["Rate"]
-    .astype(str)
-    .str.strip()
-    .str.replace(r'[^0-9\.\-]', "", regex=True)  # leaves digits, dot, minus
-)
-df["Rate"] = pd.to_numeric(df["Rate"], errors="coerce")
+# Load environment variables from .env file
+load_dotenv()  
 
 
-# save cleaned file
-df.to_csv(RAW, index=False)
+SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL")  # Supabase PostgreSQL connection URL
+API_KEY = os.getenv("API_KEY")   # Your API key for the exchange rate service
+API_URL = f"https://v6.exchangerate-api.com/v6/{API_KEY}/latest/USD"  # API endpoint for USD to NGN rates
+# API_URL = "https://v6.exchangerate-api.com/v6/2743e5b334baac7ccf84a41c/latest/USD"
 
-print(f"Read {len(df)} rows, wrote {len(df)} cleaned rows to {RAW}")
+response = requests.get(API_URL)
+data = response.json()
+
+rate = float(data['conversion_rates']["NGN"])
+date_string = data.get("time_last_update_utc")
+format_code = "%a, %d %b %Y %H:%M:%S %z"
+datetime_object = datetime.strptime(date_string, format_code)
+date = datetime_object.date()
+print(f"Fetched rate for {date}: {rate}")
+

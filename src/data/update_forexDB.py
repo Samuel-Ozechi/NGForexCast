@@ -10,35 +10,41 @@ load_dotenv()
 
 
 SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL")  # Supabase PostgreSQL connection URL
-API_URL = "https://api.exchangerate.host/latest?base=USD&symbols=NGN" # API endpoint for USD to NGN rates
+API_KEY = os.getenv("API_KEY")   # Your API key for the exchange rate service
+API_URL = f"https://v6.exchangerate-api.com/v6/{API_KEY}/latest/USD"  # API endpoint for USD to NGN rates
+
 
 def fetch_exchange_rate():
     """Fetch current USD→NGN rate from the API."""
     response = requests.get(API_URL)
     data = response.json()
-    rate = data["rates"]["NGN"]
-    timestamp = datetime.fromisoformat(data["date"])
-    return "USD", "NGN", rate, timestamp
+    rate = float(data['conversion_rates']["NGN"])
+    date_string = data.get("time_last_update_utc")
+    format_code = "%a, %d %b %Y %H:%M:%S %z"
+    datetime_object = datetime.strptime(date_string, format_code)
+    date = datetime_object.date()
 
-def store_exchange_rate(base, target, rate, timestamp):
+    return date, rate
+
+def store_exchange_rate(date, rate):
     """Insert rate into Supabase PostgreSQL."""
     conn = psycopg2.connect(SUPABASE_DB_URL, sslmode="require")
     cur = conn.cursor()
     cur.execute(
         """
-        INSERT INTO exchange_rates (base_currency, target_currency, rate, ts)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO exchange_rates (date, rate)
+        VALUES (%s, %s)
         """,
-        (base, target, rate, timestamp)
+        (date, rate)
     )
     conn.commit()
     cur.close()
     conn.close()
-    print(f"✅ Stored {base}->{target}: {rate} at {timestamp}")
+    print(f"✅ Stored {date}: {rate}")
 
 def main():
-    base, target, rate, ts = fetch_exchange_rate()
-    store_exchange_rate(base, target, rate, ts)
+    date, rate = fetch_exchange_rate()
+    store_exchange_rate(date, rate)
 
 if __name__ == "__main__":
     main()
