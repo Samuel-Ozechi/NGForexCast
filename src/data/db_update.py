@@ -1,4 +1,4 @@
-# src/data/load_forexDB.py
+# src/data/db_update.py
 import os
 import requests
 import psycopg2
@@ -10,7 +10,7 @@ load_dotenv()
 
 
 SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL")  # Supabase PostgreSQL connection URL
-API_KEY = os.getenv("API_KEY")   # Your API key for the exchange rate service
+API_KEY = os.getenv("EXCHANGE_RATE_API")   # API key for the exchange rate service
 API_URL = f"https://v6.exchangerate-api.com/v6/{API_KEY}/latest/USD"  # API endpoint for USD to NGN rates
 
 
