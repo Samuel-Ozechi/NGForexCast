@@ -1,0 +1,28 @@
+name: Update Exchange Rates Database
+
+on:
+  schedule:
+    - cron: "0 6 * * *"  # Every day at 6 AM UTC
+  workflow_dispatch:     # Allow manual run
+
+jobs:
+  fetch-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run data ingestion script
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python src/data/db_update.py
