@@ -26,4 +26,4 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           EXCHANGE_RATE_API: ${{ secrets.EXCHANGE_RATE_API }}
-        run: python src/data/update_forexDB.py
+        run: python src/data/update_forexdb.py
