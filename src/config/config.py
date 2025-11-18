@@ -4,9 +4,9 @@ import os
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, computed_field
-
-# ✅ Option 1: Use .env file
 from dotenv import load_dotenv
+
+# load variables from .env file
 load_dotenv()
 
 
@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     SUPABASE_DB_URL: str = Field(...)
     EXCHANGE_RATE_API: str = Field(...)
     
-    # Use a Pydantic computed_field (or @property) to build the URL dynamically
+    # Pydantic computed_field property to build the exchange rate API URL dynamically
     @computed_field
     @property
     def EXCHANGE_RATE_API_URL(self) -> str:
@@ -43,13 +43,13 @@ class Settings(BaseSettings):
 
     # --- Data settings ---
     FETCH_INTERVAL_HOURS: int = 24
-    TARGET_COLUMN: str = "target"
-    DATE_COLUMN: str = "ts"
+    TARGET_COLUMN: str = "Rate"
+    DATE_COLUMN: str = "Date"
 
     # --- Model training ---
     TEST_SIZE: float = 0.2
     RANDOM_STATE: int = 42
-    SCORING_METRIC: str = "f1"
+    SCORING_METRIC: str = "MAPE"
     CROSS_VALIDATION_FOLDS: int = 5
     ENABLE_HYPERPARAM_TUNING: bool = True
 
@@ -75,7 +75,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     ENABLE_DRIFT_MONITORING: bool = True
 
-
-# Global instance to import anywhere
-settings = Settings()
-print(settings.EXCHANGE_RATE_API_URL)
+if __name__ == "__main__":
+    # Global instance to import anywhere
+    settings = Settings()
+    # print(settings.EXCHANGE_RATE_API_URL)
