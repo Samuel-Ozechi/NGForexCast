@@ -104,7 +104,7 @@ def run_train():
     )
 
     # 7) Model candidates and param grids (small, extendable)
-    ranndom_state = settings.RANDOM_STATE   
+    random_state = settings.RANDOM_STATE   
     models_and_grids = [
         ("LinearRegression", LinearRegression(), {}),
         ("Ridge", Ridge(), {"alpha": [0.1, 1.0, 10.0, 50.0]}),
