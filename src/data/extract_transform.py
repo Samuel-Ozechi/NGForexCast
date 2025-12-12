@@ -4,7 +4,7 @@ import numpy as np
 import logging
 from datetime import datetime
 from src.config.settings import Settings
-from src.data.fetch_db import fetch_exchange_rates as fetch_exchange_rate_table
+from src.data.ingest import fetch_exchange_rates as fetch_exchange_rate_table
 
 # Load global settings instance
 settings = Settings()
