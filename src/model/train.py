@@ -45,33 +45,27 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(
 logger = logging.getLogger(__name__)
 
 
-def run_train(
-    experiment_name: str = None,
-    target_col: str = "rate",
-    test_fraction: float = 0.012,
-    random_state: int = 42,
-):
-    experiment_name = experiment_name or settings.MLFLOW_EXPERIMENT_NAME
+def run_train():
+    experiment_name = settings.MLFLOW_EXPERIMENT_NAME
     mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
     mlflow.set_experiment(experiment_name)
     logger.info(f"MLflow tracking uri: {settings.MLFLOW_TRACKING_URI}. Experiment: {experiment_name}")
 
-    # 1) Load processed data (cleaned)
+    # 1) Load input data from DB
     logger.info(f"Loading raw data from database")
     df = fetch_exchange_rates()
-    # Expect processed CSV to have 'date' and 'rate' columns
+    # Expect data to have 'date' and 'rate' columns
     if "date" not in df.columns:
-        raise ValueError("processed CSV must include 'date' column")
+        raise ValueError("input data must include 'date' column")
     if target_col not in df.columns:
-        raise ValueError(f"processed CSV must include target column '{target_col}'")
+        raise ValueError(f"input data must include target column '{target_col}'")
 
     # 2) Build feature engineering transformer (sklearn transformer)
-    feat_engineer = TimeSeriesFeatureEngineer()
+    feature_engineer = TimeSeriesFeatureEngineer()
 
     # 3) Create dataframe of engineered features (offline)
     logger.info("Generating engineered features (offline)")
-    df_feat = feat_engineer.transform(df)  # df_feat contains 'date' and 'rate' and engineered features
-
+    df_feat = feature_engineer.transform(df)  # df_feat contains 'date' and 'rate' and engineered features
     # normalize column names to lower
     df_feat.columns = [c.lower() for c in df_feat.columns]
 
@@ -80,6 +74,7 @@ def run_train(
     df_feat["date"] = pd.to_datetime(df_feat["date"])
     df_feat = df_feat.set_index("date")
     total = len(df_feat)
+    test_fraction = settings.TEST_SIZE
     test_size = int(total * test_fraction)
     if test_size < 1:
         test_size = 1
@@ -92,6 +87,7 @@ def run_train(
 
     # 5) Prepare X, y
     feature_cols = [c for c in df_feat.columns if c not in [target_col.lower()]]
+    target_col= settings.TARGET_COLUMN.lower()
     X_train = train_df[feature_cols].copy()
     y_train = train_df[target_col.lower()].copy()
     X_test = test_df[feature_cols].copy()
@@ -108,6 +104,7 @@ def run_train(
     )
 
     # 7) Model candidates and param grids (small, extendable)
+    ranndom_state = settings.RANDOM_STATE   
     models_and_grids = [
         ("LinearRegression", LinearRegression(), {}),
         ("Ridge", Ridge(), {"alpha": [0.1, 1.0, 10.0, 50.0]}),

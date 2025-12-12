@@ -1,4 +1,4 @@
-# src/data/fetch_db.py
+# src/data/ingest.py
 
 import pandas as pd
 from sqlalchemy import create_engine
