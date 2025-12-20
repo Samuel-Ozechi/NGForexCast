@@ -85,7 +85,7 @@ def run_train():
     logger.info(f"Test range: {test_df.index.min().date()} to {test_df.index.max().date()}")
     logger.info(f"Train shape: {train_df.shape}, Test shape: {test_df.shape}")
 
-    # 5) Prepare X, y
+    # 5) Prepare X, y  
     feature_cols = [c for c in df_feat.columns if c not in [target_col.lower()]]
     target_col= settings.TARGET_COLUMN.lower()
     X_train = train_df[feature_cols].copy()
