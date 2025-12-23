@@ -127,7 +127,7 @@ def run_train():
         ("LightGBM", LGBMRegressor(random_state=random_state, verbosity=-1), {
             "n_estimators": [100, 200], "learning_rate": [0.01, 0.05], "max_depth": [3, 5]
         }),
-        ("CatBoost", CatBoostRegressor(random_state=random_state, verbose=0), {
+        ("CatBoost", CatBoostRegressor(random_state=random_state, verbose=0, allow_writing_files=False), {
             "iterations": [100, 200], "learning_rate": [0.01, 0.05], "depth": [3, 5]
         }),
     ]
