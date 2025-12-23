@@ -1,0 +1,51 @@
+artifact_path: file:///Users/apple/NGForexCast/mlruns/285367246330324229/models/m-28afab97759e4a50a1191f65c2650173/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.9.6
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.6.1
+is_signature_from_type_hint: false
+mlflow_version: 3.1.4
+model_id: m-28afab97759e4a50a1191f65c2650173
+model_size_bytes: 5711
+model_uuid: m-28afab97759e4a50a1191f65c2650173
+prompts: null
+run_id: c928660a599b43cbac6cf0343f0600e9
+saved_input_example_info:
+  artifact_path: input_example.json
+  pandas_orient: split
+  serving_input_path: serving_input_example.json
+  type: dataframe
+signature:
+  inputs: '[{"type": "double", "name": "diff", "required": true}, {"type": "double",
+    "name": "lag_1", "required": true}, {"type": "double", "name": "lag_2", "required":
+    true}, {"type": "double", "name": "lag_6", "required": true}, {"type": "double",
+    "name": "lag_8", "required": true}, {"type": "double", "name": "lag_11", "required":
+    true}, {"type": "double", "name": "lag_13", "required": true}, {"type": "double",
+    "name": "lag_15", "required": true}, {"type": "double", "name": "lag_16", "required":
+    true}, {"type": "double", "name": "lag_25", "required": true}, {"type": "double",
+    "name": "lag_32", "required": true}, {"type": "double", "name": "lag_34", "required":
+    true}, {"type": "double", "name": "rmean_4", "required": true}, {"type": "double",
+    "name": "rstd_4", "required": true}, {"type": "double", "name": "rmean_8", "required":
+    true}, {"type": "double", "name": "rstd_8", "required": true}, {"type": "double",
+    "name": "rmean_12", "required": true}, {"type": "double", "name": "rstd_12", "required":
+    true}, {"type": "double", "name": "ret_3", "required": true}, {"type": "double",
+    "name": "ret_7", "required": true}, {"type": "double", "name": "ret_14", "required":
+    true}, {"type": "double", "name": "ret_21", "required": true}, {"type": "double",
+    "name": "ret_30", "required": true}, {"type": "double", "name": "ret_60", "required":
+    true}, {"type": "double", "name": "ret_90", "required": true}, {"type": "integer",
+    "name": "month", "required": true}, {"type": "integer", "name": "day", "required":
+    true}, {"type": "integer", "name": "year", "required": true}]'
+  outputs: '[{"type": "double", "required": true}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2025-12-23 15:13:53.943589'

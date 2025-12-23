@@ -270,7 +270,10 @@ def run_train():
 
         # Define an input example (just a small slice of our training data)
         # We use X_engineered because final_preproc_and_model is fitted on it
+        # Convert integer columns to float for MLflow compatibility
         input_example = X_engineered.iloc[[0]]
+        for col in input_example.select_dtypes(include=['int64', 'int32']).columns:
+            input_example[col] = input_example[col].astype('float64')
 
         # Register model in Model Registry
         # mlflow.sklearn.log_model expects an sklearn model/pipeline object; we register the preproc+model as sklearn model

@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/apple/NGForexCast/mlruns/285367246330324229/c928660a599b43cbac6cf0343f0600e9/artifacts
+end_time: 1766502838731
+entry_point_name: ''
+experiment_id: '285367246330324229'
+lifecycle_stage: active
+run_id: c928660a599b43cbac6cf0343f0600e9
+run_name: best_model_register_2025-12-23T15:13:53.844059+00:00
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1766502833845
+status: 3
+tags: []
+user_id: apple
