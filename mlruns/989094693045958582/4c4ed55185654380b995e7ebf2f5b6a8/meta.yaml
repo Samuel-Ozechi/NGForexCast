@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/apple/NGForexCast/mlruns/989094693045958582/4c4ed55185654380b995e7ebf2f5b6a8/artifacts
+end_time: 1766469954532
+entry_point_name: ''
+experiment_id: '989094693045958582'
+lifecycle_stage: active
+run_id: 4c4ed55185654380b995e7ebf2f5b6a8
+run_name: Ridge_2025-12-23T06:05:54.438211+00:00
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1766469954441
+status: 3
+tags: []
+user_id: apple

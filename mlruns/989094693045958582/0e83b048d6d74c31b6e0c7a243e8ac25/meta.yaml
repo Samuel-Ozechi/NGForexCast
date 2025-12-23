@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/apple/NGForexCast/mlruns/989094693045958582/0e83b048d6d74c31b6e0c7a243e8ac25/artifacts
+end_time: 1766469981512
+entry_point_name: ''
+experiment_id: '989094693045958582'
+lifecycle_stage: active
+run_id: 0e83b048d6d74c31b6e0c7a243e8ac25
+run_name: GradientBoosting_2025-12-23T06:06:21.417084+00:00
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1766469981418
+status: 3
+tags: []
+user_id: apple

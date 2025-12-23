@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/apple/NGForexCast/mlruns/989094693045958582/4515246808f24716a192b8514564c267/artifacts
+end_time: 1766469989838
+entry_point_name: ''
+experiment_id: '989094693045958582'
+lifecycle_stage: active
+run_id: 4515246808f24716a192b8514564c267
+run_name: XGBoost_2025-12-23T06:06:29.742591+00:00
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1766469989744
+status: 3
+tags: []
+user_id: apple

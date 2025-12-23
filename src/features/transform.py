@@ -77,7 +77,7 @@ class TimeSeriesFeatureEngineer(BaseEstimator, TransformerMixin):
 
         # --- Returns / Percent Change ---
         for diff in self.return_diffs:
-            df_feat[f"ret_{diff}"] = df_feat["diff"].pct_change(diff)
+            df_feat[f"ret_{diff}"] = df_feat["diff"].ffill().pct_change(periods=diff, fill_method=None)
 
         # Reset index for calendar features
         df_feat = df_feat.reset_index()

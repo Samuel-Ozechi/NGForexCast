@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/apple/NGForexCast/mlruns/989094693045958582/91dca43417224f859bdcd594bd6b8500/artifacts
+end_time: 1766469951539
+entry_point_name: ''
+experiment_id: '989094693045958582'
+lifecycle_stage: active
+run_id: 91dca43417224f859bdcd594bd6b8500
+run_name: LinearRegression_2025-12-23T06:05:51.034150+00:00
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1766469951472
+status: 3
+tags: []
+user_id: apple
