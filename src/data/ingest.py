@@ -33,5 +33,6 @@ if __name__ == "__main__":
     df = fetch_exchange_rates()
     if df is not None:
         print(f"Total records fetched: {len(df)}")
+        print(df.head(4))
     else:
         print("No data fetched.")

@@ -43,8 +43,8 @@ class Settings(BaseSettings):
 
     # --- Data settings ---
     FETCH_INTERVAL_HOURS: int = 24
-    TARGET_COLUMN: str = "Rate"
-    DATE_COLUMN: str = "Date"
+    TARGET_COLUMN: str = "rate"
+    DATE_COLUMN: str = "date"
 
     # --- Model training ---
     TEST_SIZE: float = 0.2

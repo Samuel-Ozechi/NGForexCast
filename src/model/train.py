@@ -15,11 +15,11 @@ import joblib
 import json
 import tempfile
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
-
+import sklearn
 from sklearn.model_selection import TimeSeriesSplit, GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
@@ -30,15 +30,17 @@ from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
 
+import dagshub
 import mlflow
 import mlflow.sklearn
 
 # local imports
-from src.config.settings import settings
+from src.config.settings import Settings
 from src.data.ingest import fetch_exchange_rates
 from src.features.transform import TimeSeriesFeatureEngineer
 from src.utils.utils import evaluate_metrics, plot_predictions
 
+sklearn.set_config(transform_output="pandas")
 
 # logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
@@ -46,14 +48,17 @@ logger = logging.getLogger(__name__)
 
 
 def run_train():
+    settings = Settings()
     experiment_name = settings.MLFLOW_EXPERIMENT_NAME
-    mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
+    # mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
+    mlflow.set_tracking_uri("file:./mlruns")
     mlflow.set_experiment(experiment_name)
     logger.info(f"MLflow tracking uri: {settings.MLFLOW_TRACKING_URI}. Experiment: {experiment_name}")
 
     # 1) Load input data from DB
     logger.info(f"Loading raw data from database")
     df = fetch_exchange_rates()
+    target_col= settings.TARGET_COLUMN.lower()
     # Expect data to have 'date' and 'rate' columns
     if "date" not in df.columns:
         raise ValueError("input data must include 'date' column")
@@ -87,7 +92,6 @@ def run_train():
 
     # 5) Prepare X, y  
     feature_cols = [c for c in df_feat.columns if c not in [target_col.lower()]]
-    target_col= settings.TARGET_COLUMN.lower()
     X_train = train_df[feature_cols].copy()
     y_train = train_df[target_col.lower()].copy()
     X_test = test_df[feature_cols].copy()
@@ -120,7 +124,7 @@ def run_train():
         ("XGBoost", XGBRegressor(random_state=random_state, objective="reg:squarederror"), {
             "n_estimators": [100, 200], "learning_rate": [0.01, 0.05], "max_depth": [3, 5]
         }),
-        ("LightGBM", LGBMRegressor(random_state=random_state), {
+        ("LightGBM", LGBMRegressor(random_state=random_state, verbosity=-1), {
             "n_estimators": [100, 200], "learning_rate": [0.01, 0.05], "max_depth": [3, 5]
         }),
         ("CatBoost", CatBoostRegressor(random_state=random_state, verbose=0), {
@@ -170,7 +174,7 @@ def run_train():
         logger.info(f"{name} test metrics: {metrics}")
 
         # MLflow logging per candidate
-        with mlflow.start_run(run_name=f"{name}_{datetime.utcnow().isoformat()}"):
+        with mlflow.start_run(run_name=f"{name}_{datetime.now(timezone.utc).isoformat()}"):
             mlflow.log_param("model_name", name)
             # Log best params (transform keys to remove model__)
             param_log = {k.replace("model__", ""): v for k, v in (search.best_params_ or {}).items()}
@@ -247,11 +251,11 @@ def run_train():
     ])
 
     # Save artifact locally and log to MLflow as a registered model
-    artifact_path = os.path.join(tempfile.gettempdir(), f"inference_pipeline_{datetime.utcnow().isoformat()}.joblib")
+    artifact_path = os.path.join(tempfile.gettempdir(), f"inference_pipeline_{datetime.now(timezone.utc).isoformat()}.joblib")
     joblib.dump(inference_pipeline, artifact_path)
 
     # Start a new MLflow run to register final model
-    with mlflow.start_run(run_name=f"best_model_register_{datetime.utcnow().isoformat()}") as run:
+    with mlflow.start_run(run_name=f"best_model_register_{datetime.now(timezone.utc).isoformat()}") as run:
         mlflow.log_param("best_model_name", best_name)
         for k, v in best_metrics.items():
             mlflow.log_metric(k, v)
@@ -282,7 +286,7 @@ def run_train():
 
     # 11) Plot test predictions vs actual for best model and log
     y_best_pred = best_overall["estimator"].predict(X_test)
-    plot_path = os.path.join(tempfile.gettempdir(), f"pred_vs_actual_{datetime.utcnow().isoformat()}.png")
+    plot_path = os.path.join(tempfile.gettempdir(), f"pred_vs_actual_{datetime.now(timezone.utc).isoformat()}.png")
     plot_predictions(X_test.index, y_test.values, y_best_pred, f"{best_name} Predictions", plot_path)
     # Log plot to MLflow (attach to the registration run)
     mlflow.log_artifact(plot_path, artifact_path="plots")
@@ -291,7 +295,7 @@ def run_train():
     results_summary = {
         "best_model": best_name,
         "best_metrics": best_metrics,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
     summary_path = os.path.join(settings.MODELS_DIR, "latest_training_summary.json")
     os.makedirs(settings.MODELS_DIR, exist_ok=True)
@@ -304,5 +308,4 @@ def run_train():
 
 if __name__ == "__main__":
     # entrypoint: change the path to your processed CSV
-    processed_csv_path = settings.PROCESSED_DATA_DIR / "ngn_us_exchange_rates_cleaned.csv"
-    run_train(str(processed_csv_path))
+    run_train()
