@@ -104,7 +104,7 @@ def run_train():
         transformers=[
             ("num", StandardScaler(), numeric_features),
         ],
-        remainder="passthrough"
+        remainder="drop"
     )
 
     # 7) Model candidates and param grids (small, extendable)
@@ -230,9 +230,13 @@ def run_train():
     # We will fit the preproc+model portion with engineered X (pipeline already has fit components for preproc and model)
     # To keep things consistent, transform X_full via feat_engineer, then fit preproc+model
     engineered = full_inference_pipeline.named_steps["feat_engineer"].transform(X_full)
-    engineered_cols = [c.lower() for c in engineered.columns]
-    X_engineered = engineered.drop(columns=[target_col.lower()]) if target_col.lower() in engineered.columns else engineered
-    y_engineered = engineered[target_col.lower()] if target_col.lower() in engineered.columns else None
+    # Normalize columns to lowercase
+    engineered.columns = [c.lower() for c in engineered.columns]
+
+    # Drop BOTH the target and the date column before fitting
+    cols_to_drop = [target_col.lower(), "date"]
+    X_engineered = engineered.drop(columns=[c for c in cols_to_drop if c in engineered.columns])
+    y_engineered = engineered[target_col.lower()]
 
     # fit preprocessing and model on engineered (we need to fit preproc and model)
     # We will create a final pipeline without feat_engineer (because we store feat_engineer separately in MLflow model signature)
@@ -273,14 +277,14 @@ def run_train():
         # Optional: promote to 'Staging'
         client = mlflow.tracking.MlflowClient()
         # get latest version of registered model
-        versions = client.get_latest_versions("ngn_us_exchange_model")
+        versions = client.search_model_versions("name='ngn_us_exchange_model'")
         if versions:
-            latest = versions[-1]
-            client.transition_model_version_stage(
+            # Sort by version number descending to get the most recent
+            latest = sorted(versions, key=lambda x: int(x.version))[-1]
+            client.set_registered_model_alias(
                 name="ngn_us_exchange_model",
-                version=latest.version,
-                stage="Staging",
-                archive_existing_versions=False
+                alias="staging",
+                version=latest.version
             )
         logger.info("Registered model in MLflow Model Registry as 'ngn_us_exchange_model'")
 
