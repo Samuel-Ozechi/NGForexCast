@@ -268,12 +268,20 @@ def run_train():
         # log metadata
         mlflow.log_dict({"model_name": best_name, "params": best_overall["params"]}, "model_meta.json")
 
+        # Define an input example (just a small slice of our training data)
+        # We use X_engineered because final_preproc_and_model is fitted on it
+        input_example = X_engineered.iloc[[0]]
+
         # Register model in Model Registry
         # mlflow.sklearn.log_model expects an sklearn model/pipeline object; we register the preproc+model as sklearn model
         # We will log the final_preproc_and_model and register that (feat_engineer is separate; but we include it by saving the full joblib)
-        mlflow.sklearn.log_model(final_preproc_and_model, name="sklearn_model",
-                                 registered_model_name="ngn_us_exchange_model")
-
+        # Log the model with the 'name' and 'input_example'
+        mlflow.sklearn.log_model(
+            sk_model=final_preproc_and_model, 
+            name="sklearn_model",  
+            input_example=input_example,
+            registered_model_name="ngn_us_exchange_model"
+        )
         # Optional: promote to 'Staging'
         client = mlflow.tracking.MlflowClient()
         # get latest version of registered model
