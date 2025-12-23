@@ -1,0 +1,22 @@
+artifact_path: file:///Users/apple/NGForexCast/mlruns/160553286210849094/models/m-ef686ebb69a64d878d78c315e480bb69/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.9.6
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.6.1
+mlflow_version: 3.1.4
+model_id: m-ef686ebb69a64d878d78c315e480bb69
+model_size_bytes: 3616
+model_uuid: m-ef686ebb69a64d878d78c315e480bb69
+prompts: null
+run_id: b9dc243165b54ed8937ec067809d2255
+utc_time_created: '2025-12-23 14:50:51.625603'

@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/apple/NGForexCast/mlruns/160553286210849094/d0df21f260d54de7a2f4c9707095db9d/artifacts
+end_time: 1766501457340
+entry_point_name: ''
+experiment_id: '160553286210849094'
+lifecycle_stage: active
+run_id: d0df21f260d54de7a2f4c9707095db9d
+run_name: bittersweet-cow-311
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1766501456772
+status: 3
+tags: []
+user_id: apple

@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/apple/NGForexCast/mlruns/160553286210849094/f1ba05b4293547f8a4761d8854681f5b/artifacts
+end_time: 1766501436647
+entry_point_name: ''
+experiment_id: '160553286210849094'
+lifecycle_stage: active
+run_id: f1ba05b4293547f8a4761d8854681f5b
+run_name: ExtraTrees_2025-12-23T14:50:36.517211+00:00
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1766501436519
+status: 3
+tags: []
+user_id: apple

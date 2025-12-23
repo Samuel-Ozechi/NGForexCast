@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/apple/NGForexCast/mlruns/160553286210849094/98aa58480ff24b01b203572600c6e831/artifacts
+end_time: 1766501451338
+entry_point_name: ''
+experiment_id: '160553286210849094'
+lifecycle_stage: active
+run_id: 98aa58480ff24b01b203572600c6e831
+run_name: CatBoost_2025-12-23T14:50:51.250821+00:00
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1766501451252
+status: 3
+tags: []
+user_id: apple

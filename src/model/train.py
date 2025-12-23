@@ -271,7 +271,7 @@ def run_train():
         # Register model in Model Registry
         # mlflow.sklearn.log_model expects an sklearn model/pipeline object; we register the preproc+model as sklearn model
         # We will log the final_preproc_and_model and register that (feat_engineer is separate; but we include it by saving the full joblib)
-        mlflow.sklearn.log_model(final_preproc_and_model, artifact_path="sklearn_model",
+        mlflow.sklearn.log_model(final_preproc_and_model, name="sklearn_model",
                                  registered_model_name="ngn_us_exchange_model")
 
         # Optional: promote to 'Staging'

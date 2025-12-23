@@ -1,0 +1,10 @@
+artifact_location: file:///Users/apple/NGForexCast/mlruns/160553286210849094/models/m-ef686ebb69a64d878d78c315e480bb69/artifacts
+creation_timestamp: 1766501451593
+experiment_id: '160553286210849094'
+last_updated_timestamp: 1766501456027
+model_id: m-ef686ebb69a64d878d78c315e480bb69
+model_type: null
+name: sklearn_model
+source_run_id: b9dc243165b54ed8937ec067809d2255
+status: 2
+status_message: null
