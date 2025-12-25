@@ -3,7 +3,14 @@ import numpy as np
 from sklearn.metrics import mean_absolute_error, root_mean_squared_error
 import matplotlib.pyplot as plt
 from typing import Dict
+import os, json, joblib, shutil
+from src.config.settings import Settings
 
+settings = Settings()
+PROD_PATH = settings.PROD_PATH
+MODEL_PATH = settings.MODEL_PATH
+META_PATH = settings.META_PATH
+os.makedirs(PROD_PATH, exist_ok=True)
 
 
 def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
@@ -18,7 +25,6 @@ def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]
     r2 = 1 - ss_res / ss_tot if ss_tot != 0 else 0.0
     return {"MAE": float(mae), "RMSE": float(rmse), "MAPE": float(mape), "R2": float(r2)}
 
-
 def plot_predictions(dates, y_true, y_pred, title: str, path: str):
     plt.figure(figsize=(10, 5))
     plt.plot(dates, y_true, label="Actual", linestyle="--", color="black")
@@ -31,3 +37,9 @@ def plot_predictions(dates, y_true, y_pred, title: str, path: str):
     plt.savefig(path)
     plt.close()
 
+def promote_to_production(inference_pipeline, metadata):
+    tmp = PROD_PATH + "/_tmp.joblib"
+    joblib.dump(inference_pipeline, tmp)
+    os.replace(tmp, MODEL_PATH)          # atomic swap
+    with open(META_PATH, "w") as f:
+        json.dump(metadata, f, indent=2)

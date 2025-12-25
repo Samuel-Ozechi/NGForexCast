@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     MODELS_DIR: Path = BASE_DIR / "models"
     LOGS_DIR: Path = BASE_DIR / "logs"
 
+   # --- Production model paths ---
+    PROD_PATH: str = "artifacts/model"
+    MODEL_PATH: str = os.path.join(PROD_PATH, "inference_pipeline.joblib")
+    META_PATH: str = os.path.join(PROD_PATH, "model_meta.json")
+
     # --- Database & APIs ---
     SUPABASE_DB_URL: str = Field(...)
     EXCHANGE_RATE_API: str = Field(...)
@@ -63,7 +68,7 @@ class Settings(BaseSettings):
         default="https://dagshub.com/Chiebukar/NGForexCast.mlflow", 
         description="MLflow server URL or local path"
     )
-    MLFLOW_EXPERIMENT_NAME: str = "currency_rate_prediction"
+    MLFLOW_EXPERIMENT_NAME: str = "currency_rate_predictions"
 
     # --- Model serving / API ---
     API_HOST: str = "0.0.0.0"

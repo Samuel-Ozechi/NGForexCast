@@ -39,7 +39,7 @@ from mlflow.tracking import MlflowClient
 from src.config.settings import Settings
 from src.data.ingest import fetch_exchange_rates
 from src.features.transform import TimeSeriesFeatureEngineer
-from src.utils.utils import evaluate_metrics, plot_predictions
+from src.utils.utils import evaluate_metrics, plot_predictions, promote_to_production
 
 sklearn.set_config(transform_output="pandas")
 
@@ -253,6 +253,16 @@ def run_train():
                 if new_mae < champion_mae:
                     logger.info("Challenger is better! Promoting to Staging.")
                     client.set_registered_model_alias(model_name, "staging", new_version)
+                    promote_to_production(
+                        inference_pipeline,
+                        {
+                            "model_name": best_name,
+                            "mlflow_version": new_version,
+                            "MAE": new_mae,
+                            "promoted_at": datetime.now(timezone.utc).isoformat()
+                        }
+                    )
+
                 else:
                     logger.info("Champion remains. Challenger not promoted.")
                     
@@ -260,6 +270,17 @@ def run_train():
                 # If no staging alias exists, promote this first one
                 logger.info("No current staging model found. Promoting as first champion.")
                 client.set_registered_model_alias(model_name, "staging", new_version)
+                client.set_registered_model_alias(model_name, "staging", new_version)
+
+                promote_to_production(
+                    inference_pipeline,
+                    {
+                        "model_name": best_name,
+                        "mlflow_version": new_version,
+                        "MAE": new_mae,
+                        "promoted_at": datetime.now(timezone.utc).isoformat()
+                    }
+                )
 
     return best_overall
 
