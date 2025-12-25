@@ -33,7 +33,6 @@ from catboost import CatBoostRegressor
 import dagshub
 import mlflow
 import mlflow.sklearn
-from mlflow.tracking import MlflowClient
 
 # local imports
 from src.config.settings import Settings
@@ -65,38 +64,50 @@ def run_train():
         raise ValueError("input data must include 'date' column")
     if target_col not in df.columns:
         raise ValueError(f"input data must include target column '{target_col}'")
-    
-    # 2) Feature Engineering
-    logger.info("Generating engineered features (offline)")
+
+    # 2) Build feature engineering transformer (sklearn transformer)
     feature_engineer = TimeSeriesFeatureEngineer()
-    df_feat = feature_engineer.transform(df)
+
+    # 3) Create dataframe of engineered features (offline)
+    logger.info("Generating engineered features (offline)")
+    df_feat = feature_engineer.transform(df)  # df_feat contains 'date' and 'rate' and engineered features
+    # normalize column names to lower
     df_feat.columns = [c.lower() for c in df_feat.columns]
 
-    # 4) Train/Test Split
-    logger.info("Preparing train and test sets")
+    # 4) Time-series train/test split (index by date)
     df_feat = df_feat.sort_values("date").reset_index(drop=True)
     df_feat["date"] = pd.to_datetime(df_feat["date"])
     df_feat = df_feat.set_index("date")
-    
-    test_size = int(len(df_feat) * settings.TEST_SIZE) 
+    total = len(df_feat)
+    test_fraction = settings.TEST_SIZE
+    test_size = int(total * test_fraction)
+    if test_size < 1:
+        test_size = 1
     train_df = df_feat.iloc[:-test_size].copy()
     test_df = df_feat.iloc[-test_size:].copy()
+
     logger.info(f"Train range: {train_df.index.min().date()} to {train_df.index.max().date()}")
     logger.info(f"Test range: {test_df.index.min().date()} to {test_df.index.max().date()}")
     logger.info(f"Train shape: {train_df.shape}, Test shape: {test_df.shape}")
 
-    # 5) Prepare X, y
-    feature_cols = [c for c in df_feat.columns if c != target_col]
-    X_train, y_train = train_df[feature_cols], train_df[target_col]
-    X_test, y_test = test_df[feature_cols], test_df[target_col]
+    # 5) Prepare X, y  
+    feature_cols = [c for c in df_feat.columns if c not in [target_col.lower()]]
+    X_train = train_df[feature_cols].copy()
+    y_train = train_df[target_col.lower()].copy()
+    X_test = test_df[feature_cols].copy()
+    y_test = test_df[target_col.lower()].copy()
 
-    # 6) Preprocessing
-    logger.info("Data preprocessing")
+    # 6) Build preprocessing ColumnTransformer
+    # All feature columns are numeric in our scenario. Use StandardScaler on all numeric features.
     numeric_features = X_train.select_dtypes(include=[np.number]).columns.tolist()
-    preproc = ColumnTransformer([("num", StandardScaler(), numeric_features)], remainder="drop")
+    preproc = ColumnTransformer(
+        transformers=[
+            ("num", StandardScaler(), numeric_features),
+        ],
+        remainder="drop"
+    )
 
-    # 7) Model candidates
-    logger.info("Model Training and Hyperparameter Tuning")
+    # 7) Model candidates and param grids (small, extendable)
     random_state = settings.RANDOM_STATE   
     models_and_grids = [
         ("LinearRegression", LinearRegression(), {}),
@@ -123,37 +134,78 @@ def run_train():
 
     # 8) CV strategy
     cv = TimeSeriesSplit(n_splits=5)
+
+    # --- RETRAINING PERIOD GROUPING ---
+    # Wrap all runs in a Parent Run to group this retraining session
     parent_run_name = f"Retraining_Session_{datetime.now(timezone.utc).strftime('%Y-%m-%d_%H%M')}"
     
     with mlflow.start_run(run_name=parent_run_name) as parent_run:
         logger.info(f"Started Parent MLflow Run: {parent_run_name}")
-
+        
         # 9) Iterate models, grid search, log to MLflow
         model_results = []
         best_overall = None
-        best_metric = float("inf") 
+        best_metric = float("inf")  # lower is better for MAE
 
         for name, model_obj, param_grid in models_and_grids:
             logger.info(f"Starting training candidate: {name}")
             # pipeline: preprocessing + model
-            pipeline = Pipeline([("preproc", preproc), ("model", model_obj)])
-            grid = {f"model__{k}": v for k, v in param_grid.items()}
+            pipeline = Pipeline([
+                ("preproc", preproc),
+                ("model", model_obj)
+            ])
 
-            search = GridSearchCV(pipeline, grid or [{}], scoring="neg_mean_absolute_error", cv=cv, n_jobs=-1)
+            # If no params to search, wrap with a trivial grid of empty dict
+            if param_grid:
+                # convert param grid to pipeline param names: model__param
+                grid = {f"model__{k}": v for k, v in param_grid.items()}
+            else:
+                grid = {}
+
+            search = GridSearchCV(
+                estimator=pipeline,
+                param_grid=grid or [{}],
+                scoring="neg_mean_absolute_error",
+                cv=cv,
+                n_jobs=-1,
+                verbose=0,
+                refit=True
+            )
+
             search.fit(X_train, y_train)
+            logger.info(f"{name} best params: {search.best_params_}")
 
+            # Evaluate on test set
             y_pred = search.predict(X_test)
             metrics = evaluate_metrics(y_test.values, y_pred)
             logger.info(f"{name} test metrics: {metrics}")
 
+            # MLflow logging per candidate (NESTED under parent)
             with mlflow.start_run(run_name=f"{name}_{datetime.now(timezone.utc).isoformat()}", nested=True):
                 mlflow.log_param("model_name", name)
-                mlflow.log_metrics(metrics)
-                # Log model locally then to mlflow
-                tmp_path = os.path.join(tempfile.gettempdir(), f"{name}.joblib")
-                joblib.dump(search.best_estimator_, tmp_path)
-                mlflow.log_artifact(tmp_path, artifact_path="models")
+                # Log best params (transform keys to remove model__)
+                param_log = {k.replace("model__", ""): v for k, v in (search.best_params_ or {}).items()}
+                for k, v in param_log.items():
+                    mlflow.log_param(k, v)
+                # log metrics
+                for k, v in metrics.items():
+                    mlflow.log_metric(k, v)
+                # log model artifact (pipeline with fitted preproc + model)
+                # Save locally
+                tmp_model_path = os.path.join(tempfile.gettempdir(), f"{name}_pipeline.joblib")
+                joblib.dump(search.best_estimator_, tmp_model_path)
+                mlflow.log_artifact(tmp_model_path, artifact_path="models")
+                # also log a small JSON of metrics
+                mlflow.log_dict(metrics, "metrics.json")
 
+            model_results.append({
+                "name": name,
+                "best_estimator": search.best_estimator_,
+                "metrics": metrics,
+                "best_params": search.best_params_,
+            })
+
+            # Update best overall by MAE
             if metrics["MAE"] < best_metric:
                 best_metric = metrics["MAE"]
                 best_overall = {
@@ -162,20 +214,25 @@ def run_train():
                     "metrics": metrics,
                     "params": search.best_params_,
                 }
-        # --- 10) Register best model in MLflow Model Registry and save final inference pipeline ---
-        if best_overall:
-            best_name = best_overall["name"]
-            best_estimator = best_overall["estimator"]
-            best_metrics = best_overall["metrics"]
-            logger.info(f"Best overall model: {best_name} with MAE={best_metrics['MAE']:.6f}")
-            
-            # Fit final model on full dataset
-            full_inference_pipeline = Pipeline([
+
+        # 10) Register best model in MLflow Model Registry and save final inference pipeline
+        if best_overall is None:
+            raise RuntimeError("No model was trained successfully.")
+
+        best_name = best_overall["name"]
+        best_estimator = best_overall["estimator"]
+        best_metrics = best_overall["metrics"]
+        logger.info(f"Best overall model: {best_name} with MAE={best_metrics['MAE']:.6f}")
+
+        # Save final inference pipeline (we'll include the feature-engineer + preproc + model)
+        # Compose full inference pipeline that accepts raw cleaned dataframe (date, rate)
+        full_inference_pipeline = Pipeline([
             ("feat_engineer", TimeSeriesFeatureEngineer()),
             ("preproc", preproc),
             ("model", best_estimator.named_steps["model"])  # extracted model
         ])
-            # Fit the full inference pipeline on the full training+test data for production
+
+        # Fit the full inference pipeline on the full training+test data for production
         X_full = df_feat.reset_index(drop=False)  # date column included; feat transformer expects date & rate
         # We will fit the preproc+model portion with engineered X (pipeline already has fit components for preproc and model)
         # To keep things consistent, transform X_full via feat_engineer, then fit preproc+model
@@ -208,6 +265,7 @@ def run_train():
         artifact_path = os.path.join(tempfile.gettempdir(), f"inference_pipeline_{datetime.now(timezone.utc).isoformat()}.joblib")
         joblib.dump(inference_pipeline, artifact_path)
 
+        # Start a new MLflow run to register final model (NESTED under parent)
         with mlflow.start_run(run_name=f"best_model_register_{datetime.now(timezone.utc).isoformat()}", nested=True) as run:
             mlflow.log_param("best_model_name", best_name)
             for k, v in best_metrics.items():
@@ -228,38 +286,47 @@ def run_train():
             # mlflow.sklearn.log_model expects an sklearn model/pipeline object; we register the preproc+model as sklearn model
             # We will log the final_preproc_and_model and register that (feat_engineer is separate; but we include it by saving the full joblib)
             # Log the model with the 'name' and 'input_example'
-            model_info = mlflow.sklearn.log_model(
+            mlflow.sklearn.log_model(
                 sk_model=final_preproc_and_model, 
                 name="sklearn_model",  
                 input_example=input_example,
                 registered_model_name="ngn_us_exchange_model"
             )
-            
-            model_name = "ngn_us_exchange_model"
-            new_version = model_info.registered_model_version
-            new_mae = best_overall["metrics"]["MAE"]
-            client = MlflowClient()
+            # promote to Staging
+            client = mlflow.tracking.MlflowClient()
+            # get latest version of registered model
+            versions = client.search_model_versions("name='ngn_us_exchange_model'")
+            if versions:
+                # Sort by version number descending to get the most recent
+                latest = sorted(versions, key=lambda x: int(x.version))[-1]
+                client.set_registered_model_alias(
+                    name="ngn_us_exchange_model",
+                    alias="staging",
+                    version=latest.version
+                )
+            logger.info("Registered model in MLflow Model Registry as 'ngn_us_exchange_model'")
 
-            try:
-                # Retrieve the current "Staging" champion
-                champion_version = client.get_model_version_by_alias(model_name, "staging")
-                champion_run = client.get_run(champion_version.run_id)
-                champion_mae = champion_run.data.metrics.get("MAE", float("inf"))
-                
-                logger.info(f"Challenger (v{new_version}) MAE: {new_mae:.4f} | Champion (v{champion_version.version}) MAE: {champion_mae:.4f}")
+        # 11) Plot test predictions vs actual for best model and log (To the parent run context)
+        y_best_pred = best_overall["estimator"].predict(X_test)
+        plot_path = os.path.join(tempfile.gettempdir(), f"pred_vs_actual_{datetime.now(timezone.utc).isoformat()}.png")
+        plot_predictions(X_test.index, y_test.values, y_best_pred, f"{best_name} Predictions", plot_path)
+        # Log plot to MLflow (attach to the registration run/parent)
+        mlflow.log_artifact(plot_path, artifact_path="plots")
 
-                if new_mae < champion_mae:
-                    logger.info("Challenger is better! Promoting to Staging.")
-                    client.set_registered_model_alias(model_name, "staging", new_version)
-                else:
-                    logger.info("Champion remains. Challenger not promoted.")
-                    
-            except Exception:
-                # If no staging alias exists, promote this first one
-                logger.info("No current staging model found. Promoting as first champion.")
-                client.set_registered_model_alias(model_name, "staging", new_version)
+    # 12) Save summary results locally too
+    results_summary = {
+        "best_model": best_name,
+        "best_metrics": best_metrics,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    summary_path = os.path.join(settings.MODELS_DIR, "latest_training_summary.json")
+    os.makedirs(settings.MODELS_DIR, exist_ok=True)
+    with open(summary_path, "w") as f:
+        json.dump(results_summary, f, indent=2)
+    logger.info(f"Saved results summary to {summary_path}")
 
     return best_overall
+
 
 if __name__ == "__main__":
     run_train()
