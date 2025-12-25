@@ -46,13 +46,16 @@ sklearn.set_config(transform_output="pandas")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
 
+# Initialize DagsHub MLflow integration
+dagshub.init(repo_owner='Chiebukar', repo_name='NGForexCast', mlflow=True)
+
 
 def run_train():
     settings = Settings()
     experiment_name = settings.MLFLOW_EXPERIMENT_NAME
-    # mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
-    mlflow.set_tracking_uri("file:./mlruns")
     mlflow.set_experiment(experiment_name)
+    # mlflow.set_tracking_uri("file:./mlruns")
+    # mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
     logger.info(f"MLflow tracking uri: {settings.MLFLOW_TRACKING_URI}. Experiment: {experiment_name}")
 
     # 1) Load input data from DB

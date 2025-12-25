@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     # --- MLflow / Experiment Tracking ---
     USE_MLFLOW: bool = True
     MLFLOW_TRACKING_URI: str = Field(
-        default="http://localhost:5000", 
+        default="https://dagshub.com/Chiebukar/NGForexCast.mlflow", 
         description="MLflow server URL or local path"
     )
     MLFLOW_EXPERIMENT_NAME: str = "currency_rate_prediction"
