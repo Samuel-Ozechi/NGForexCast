@@ -22,7 +22,7 @@ class TimeSeriesFeatureEngineer(BaseEstimator, TransformerMixin):
     """
 
     def __init__(
-        self,
+        self, 
         lag_list: List[int] = None,
         rolling_windows: List[int] = None,
         return_diffs: List[int] = None,
@@ -94,6 +94,6 @@ class TimeSeriesFeatureEngineer(BaseEstimator, TransformerMixin):
         df_feat = df_feat.dropna().reset_index(drop=True)
 
         logger.info("Feature engineering complete. Sample:")
-        logger.info(df_feat.head())
+        logger.info(df_feat.tail(2))
 
         return df_feat
