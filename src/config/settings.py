@@ -31,9 +31,16 @@ class Settings(BaseSettings):
     LOGS_DIR: Path = BASE_DIR / "logs"
 
    # --- Production model paths ---
-    PROD_PATH: str = "artifacts/model"
+    PROD_PATH: Path = BASE_DIR / "artifacts/model"
     MODEL_PATH: str = os.path.join(PROD_PATH, "inference_pipeline.joblib")
     META_PATH: str = os.path.join(PROD_PATH, "model_meta.json")
+
+   # Plot paths
+    PLOTS_DIR: Path = BASE_DIR / "artifacts/plots"
+    TRAINING_PLOTS_DIR: Path = PLOTS_DIR / "training"
+    TRAINING_PLOT_PATH: Path = TRAINING_PLOTS_DIR / "training_results.png"
+    INFERENCE_PLOTS_DIR: Path = PLOTS_DIR / "inference"
+    INFERENCE_PLOT_PATH: Path = INFERENCE_PLOTS_DIR / "inference_results.png"
 
     # --- Database & APIs ---
     SUPABASE_DB_URL: str = Field(...)

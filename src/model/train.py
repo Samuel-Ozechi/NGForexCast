@@ -11,6 +11,7 @@ Training pipeline.
 """
 
 import os
+import shutil
 import joblib
 import json
 import tempfile
@@ -151,10 +152,15 @@ def run_train():
             with mlflow.start_run(run_name=f"{name}_{datetime.now(timezone.utc).isoformat()}", nested=True):
                 mlflow.log_param("model_name", name)
                 mlflow.log_metrics(metrics)
-                # Log model locally then to mlflow
-                tmp_path = os.path.join(tempfile.gettempdir(), f"{name}.joblib")
-                joblib.dump(search.best_estimator_, tmp_path)
-                mlflow.log_artifact(tmp_path, artifact_path="models")
+                # Plot and log plot for this specific candidate model
+                temp_plot_path = os.path.join(tempfile.gettempdir(), f"{name}_pred.png")
+                plot_predictions(test_df.index, y_test.values, y_pred, f"{name} Test Results", temp_plot_path)
+                mlflow.log_artifact(temp_plot_path, artifact_path="plots")
+
+                # # Log model locally then to mlflow
+                # tmp_path = os.path.join(tempfile.gettempdir(), f"{name}.joblib")
+                # joblib.dump(search.best_estimator_, tmp_path)
+                # mlflow.log_artifact(tmp_path, artifact_path="models")
 
             if metrics["MAE"] < best_metric:
                 best_metric = metrics["MAE"]
@@ -170,7 +176,8 @@ def run_train():
             best_estimator = best_overall["estimator"]
             best_metrics = best_overall["metrics"]
             logger.info(f"Best overall model: {best_name} with MAE={best_metrics['MAE']:.6f}")
-            
+
+
             # Fit final model on full dataset
             full_inference_pipeline = Pipeline([
             ("feat_engineer", TimeSeriesFeatureEngineer()),
@@ -207,17 +214,24 @@ def run_train():
         ])
 
         # Save artifact locally and log to MLflow as a registered model
-        artifact_path = os.path.join(tempfile.gettempdir(), f"inference_pipeline_{datetime.now(timezone.utc).isoformat()}.joblib")
-        joblib.dump(inference_pipeline, artifact_path)
+        temp_artifact_path = os.path.join(tempfile.gettempdir(), f"inference_pipeline_{datetime.now(timezone.utc).isoformat()}.joblib")
+        joblib.dump(inference_pipeline, temp_artifact_path)
+
+        # Generate and save training plot
+        y_best_pred = best_estimator.predict(X_test)
+        temp_plot_path = os.path.join(tempfile.gettempdir(), "inference_results.png")
+        plot_predictions(test_df.index, y_test.values, y_best_pred, f"{best_name} Test Results", temp_plot_path)
 
         with mlflow.start_run(run_name=f"best_model_register_{datetime.now(timezone.utc).isoformat()}", nested=True) as run:
+            logger.info(f"Logging best model and artifacts to MLflow")
             mlflow.log_param("best_model_name", best_name)
             for k, v in best_metrics.items():
                 mlflow.log_metric(k, v)
             # log pipeline artifact
-            mlflow.log_artifact(artifact_path, artifact_path="inference_pipeline")
+            mlflow.log_artifact(temp_artifact_path, artifact_path="inference_pipeline")
             # log metadata
             mlflow.log_dict({"model_name": best_name, "params": best_overall["params"]}, "model_meta.json")
+            mlflow.log_artifact(temp_plot_path, artifact_path="plots")
 
             # Define an input example (just a small slice of our training data)
             # We use X_engineered because final_preproc_and_model is fitted on it
@@ -262,6 +276,7 @@ def run_train():
                             "promoted_at": datetime.now(timezone.utc).isoformat()
                         }
                     )
+                    shutil.copy(temp_plot_path, settings.TRAINING_PLOT_PATH)
 
                 else:
                     logger.info("Champion remains. Challenger not promoted.")
@@ -281,6 +296,7 @@ def run_train():
                         "promoted_at": datetime.now(timezone.utc).isoformat()
                     }
                 )
+                shutil.copy(temp_plot_path, settings.TRAINING_PLOT_PATH)
 
     return best_overall
 
