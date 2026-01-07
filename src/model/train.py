@@ -68,6 +68,12 @@ def run_train():
         raise ValueError("input data must include 'date' column")
     if target_col not in df.columns:
         raise ValueError(f"input data must include target column '{target_col}'")
+    # Save data to local directory for reference
+    data_dir = settings.RAW_DATA_DIR
+    os.makedirs(data_dir, exist_ok=True)
+    raw_data_path = data_dir / "train_data.csv"
+    df.to_csv(raw_data_path, index=False)
+    logger.info(f"Raw training data saved to: {raw_data_path}")
     
     # 2) Feature Engineering
     logger.info("Generating engineered features (offline)")

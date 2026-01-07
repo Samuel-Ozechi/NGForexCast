@@ -45,6 +45,18 @@ class Settings(BaseSettings):
     # --- Database & APIs ---
     SUPABASE_DB_URL: str = Field(...)
     EXCHANGE_RATE_API: str = Field(...)
+
+    # --- Monitoring ---
+    MONITORING_DIR: Path = BASE_DIR / "artifacts/monitoring"
+    DRIFT_REPORT_PATH: Path = MONITORING_DIR / "drift_report.html"
+    DRIFT_LOG_PATH: Path = MONITORING_DIR / "drift_log.csv"
+    REFERENCE_PROFILE_PATH: Path = MONITORING_DIR / "reference_profile.json"
+    # DRIFT_ALERT_EMAIL: str = Field(...)
+    # ALERT_SMTP_SERVER: str = Field(...)
+    # ALERT_SMTP_PORT: int = Field(...)
+    # ALERT_EMAIL_USERNAME: str = Field(...)
+    # ALERT_EMAIL_PASSWORD: str = Field(...)
+
     
     # Pydantic computed_field property to build the exchange rate API URL dynamically
     @computed_field
