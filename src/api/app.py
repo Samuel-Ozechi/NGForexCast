@@ -20,4 +20,4 @@ def health():
 @app.post("/forecast")
 def forecast(req: ForecastRequest):
     preds = service.recursive_forecast(req.weeks)
-    return {"horizon": req.weeks, "forecast": preds}
+    return {"horizon": req.weeks, "forecast": preds} 
