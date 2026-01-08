@@ -1,4 +1,4 @@
-# app.py
+# src/api/app.py
 
 from fastapi import FastAPI
 from pydantic import BaseModel
