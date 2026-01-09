@@ -68,12 +68,13 @@ def run_train():
         raise ValueError("input data must include 'date' column")
     if target_col not in df.columns:
         raise ValueError(f"input data must include target column '{target_col}'")
-    # Save data to local directory for reference
-    data_dir = settings.RAW_DATA_DIR
-    os.makedirs(data_dir, exist_ok=True)
-    raw_data_path = data_dir / "train_data.csv"
-    df.to_csv(raw_data_path, index=False)
-    logger.info(f"Raw training data saved to: {raw_data_path}")
+    
+    # # Save data to local directory for reference
+    # data_dir = settings.RAW_DATA_DIR
+    # os.makedirs(data_dir, exist_ok=True)
+    # raw_data_path = data_dir / "train_data.csv"
+    # df.to_csv(raw_data_path, index=False)
+    # logger.info(f"Raw training data saved to: {raw_data_path}")
     
     # 2) Feature Engineering
     logger.info("Generating engineered features (offline)")
@@ -163,10 +164,6 @@ def run_train():
                 plot_predictions(test_df.index, y_test.values, y_pred, f"{name} Test Results", temp_plot_path)
                 mlflow.log_artifact(temp_plot_path, artifact_path="plots")
 
-                # # Log model locally then to mlflow
-                # tmp_path = os.path.join(tempfile.gettempdir(), f"{name}.joblib")
-                # joblib.dump(search.best_estimator_, tmp_path)
-                # mlflow.log_artifact(tmp_path, artifact_path="models")
 
             if metrics["MAE"] < best_metric:
                 best_metric = metrics["MAE"]

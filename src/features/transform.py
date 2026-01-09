@@ -119,6 +119,6 @@ if __name__ == "__main__":
 
     logger.info("Saving transformed features to CSV...")
     settings = Settings()
-    features_path = os.path.join(settings.FEATURE_DATA_DIR, "features.csv")
+    features_path = os.path.join(settings.FEATURE_DATA_DIR, "ngn_us_exchange_rates_features")
     df.to_csv(features_path, index=False)
     print(transformed_df.head())
