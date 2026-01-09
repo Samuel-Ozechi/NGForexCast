@@ -1,9 +1,13 @@
 # src/features/transform.py
+import os
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from typing import List
 import logging
+from src.data.ingest import fetch_exchange_rates 
+from src.config.settings import Settings 
+
 
 logger = logging.getLogger(__name__)
 
@@ -97,3 +101,24 @@ class TimeSeriesFeatureEngineer(BaseEstimator, TransformerMixin):
         logger.info(df_feat.tail(2))
 
         return df_feat
+    
+
+if __name__ == "__main__":
+    
+    # data = {
+    #     "date": pd.date_range(start="2020-01-01", periods=100, freq="D"),
+    #     "rate": np.random.rand(100) * 100
+    # }
+    # df = pd.DataFrame(data)
+    logger.info("Fetching exchange rate data for feature engineering...")
+    df = fetch_exchange_rates()
+
+    logger.info("Transforming data...")
+    feature_engineer = TimeSeriesFeatureEngineer()
+    transformed_df = feature_engineer.transform(df)
+
+    logger.info("Saving transformed features to CSV...")
+    settings = Settings()
+    features_path = os.path.join(settings.FEATURE_DATA_DIR, "features.csv")
+    df.to_csv(features_path, index=False)
+    print(transformed_df.head())
