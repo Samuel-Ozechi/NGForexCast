@@ -17,6 +17,7 @@ import json
 import tempfile
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -41,6 +42,7 @@ from src.config.settings import Settings
 from src.data.ingest import fetch_exchange_rates
 from src.features.transform import TimeSeriesFeatureEngineer
 from src.utils.utils import evaluate_metrics, plot_predictions, promote_to_production
+from src.utils.utils import build_reference_drift_profile
 
 sklearn.set_config(transform_output="pandas")
 
@@ -251,6 +253,7 @@ def run_train():
                 sk_model=final_preproc_and_model, 
                 name="sklearn_model",  
                 input_example=input_example,
+    
                 registered_model_name="ngn_us_exchange_model"
             )
             
@@ -258,6 +261,9 @@ def run_train():
             new_version = model_info.registered_model_version
             new_mae = best_overall["metrics"]["MAE"]
             client = MlflowClient()
+            
+            # Ensure plot directory exists
+            Path(settings.TRAINING_PLOT_PATH).parent.mkdir(parents=True, exist_ok=True)
 
             try:
                 # Retrieve the current "Staging" champion
@@ -279,6 +285,8 @@ def run_train():
                             "promoted_at": datetime.now(timezone.utc).isoformat()
                         }
                     )
+                    build_reference_drift_profile(df, inference_pipeline)
+                    mlflow.log_artifact(settings.REFERENCE_PROFILE_PATH, artifact_path="monitoring")
                     shutil.copy(temp_plot_path, settings.TRAINING_PLOT_PATH)
 
                 else:
@@ -299,6 +307,8 @@ def run_train():
                         "promoted_at": datetime.now(timezone.utc).isoformat()
                     }
                 )
+                build_reference_drift_profile(df, inference_pipeline)
+                mlflow.log_artifact(settings.REFERENCE_PROFILE_PATH, artifact_path="monitoring")
                 shutil.copy(temp_plot_path, settings.TRAINING_PLOT_PATH)
 
     return best_overall
