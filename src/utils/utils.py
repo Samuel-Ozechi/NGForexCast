@@ -1,10 +1,14 @@
 # src/utils/utils.py
 import numpy as np
+import pandas as pd
 from sklearn.metrics import mean_absolute_error, root_mean_squared_error
 import matplotlib.pyplot as plt
 from typing import Dict
 import os, json, joblib, shutil
 from src.config.settings import Settings
+from src.monitoring.evidently_profile import save_reference_profile
+from sklearn.base import BaseEstimator
+
 
 settings = Settings()
 PROD_PATH = settings.PROD_PATH
@@ -38,8 +42,37 @@ def plot_predictions(dates, y_true, y_pred, title: str, path: str):
     plt.close()
 
 def promote_to_production(inference_pipeline, metadata):
-    tmp = PROD_PATH + "/_tmp.joblib"
+    tmp = PROD_PATH / "_tmp.joblib"
     joblib.dump(inference_pipeline, tmp)
     os.replace(tmp, MODEL_PATH)          # atomic swap
     with open(META_PATH, "w") as f:
         json.dump(metadata, f, indent=2)
+
+def build_reference_drift_profile(df: pd.DataFrame, model: BaseEstimator) -> str:
+    """
+    Generates in-sample predictions using the trained inference pipeline,
+    ensuring lengths match by using the transformer's output.
+    """
+    # 1. Weekly Resampling (matching what the transformer expects internally)
+    df["date"] = pd.to_datetime(df["date"])
+    df_resampled = df.set_index("date").sort_index()  
+    df_resampled = df_resampled["rate"].resample("W-FRI").last().to_frame().reset_index()
+
+    # 2. Get the transformed data (to know which rows were kept after dropna)
+    # The first step of your model pipeline is the TimeSeriesFeatureEngineer
+    transformer = model.named_steps["feat_engineer"]
+    transformed_df = transformer.transform(df_resampled)
+    
+    # 3. Generate predictions
+    # The model.predict(df_resampled) internally runs transform() then predict()
+    preds = model.predict(df_resampled)
+
+    # 4. ALIGNMENT: Create the reference dataframe using ONLY the rows 
+    # that survived the feature engineering (the 'transformed_df' rows)
+    reference_df = transformed_df[["date", "rate"]].copy()
+    reference_df["prediction"] = preds
+
+    # 5. Get proxy drift baseline
+    save_reference_profile(reference_df)
+
+    return str(settings.REFERENCE_PROFILE_PATH)
