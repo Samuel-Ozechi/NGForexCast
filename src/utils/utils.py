@@ -9,13 +9,17 @@ from src.config.settings import Settings
 from src.monitoring.evidently_profile import save_reference_profile
 from sklearn.base import BaseEstimator
 import mlflow
+from datetime import datetime, timezone
+import logging
 
 
 settings = Settings()
 PROD_PATH = settings.PROD_PATH
 MODEL_PATH = settings.MODEL_PATH
 META_PATH = settings.META_PATH
+RAW_DATA_DIR = settings.RAW_DATA_DIR
 os.makedirs(PROD_PATH, exist_ok=True)
+logger = logging.getLogger(__name__)
 
 
 def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
@@ -125,3 +129,26 @@ def build_reference_drift_profile(df: pd.DataFrame, model: BaseEstimator) -> str
     mlflow.log_table(data=summary_df, artifact_file="monitoring/reference_profile.json")
 
     return str(settings.REFERENCE_PROFILE_PATH)
+
+def save_data_scope(df: pd.DataFrame) -> dict:
+    """
+    Calculates and persists the temporal scope of the training data.
+    Used to distinguish between historical training data and new prediction data.
+    """
+    # Ensure date is datetime
+    if not pd.api.types.is_datetime64_any_dtype(df['date']):
+        df['date'] = pd.to_datetime(df['date'])
+    
+    scope = {
+        "start_date": df["date"].min().strftime("%Y-%m-%d"),
+        "end_date": df["date"].max().strftime("%Y-%m-%d"),
+        "total_weeks": len(df),
+        "last_updated": datetime.now(timezone.utc).isoformat()
+    }
+    
+    scope_path = RAW_DATA_DIR / "data_scope.json"
+    with open(scope_path, "w") as f:
+        json.dump(scope, f, indent=4)
+        
+    logger.info(f"Data scope saved: {scope['start_date']} to {scope['end_date']}")
+    return scope
