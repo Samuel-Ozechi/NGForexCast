@@ -41,7 +41,7 @@ from mlflow.tracking import MlflowClient
 from src.config.settings import Settings
 from src.data.ingest import fetch_exchange_rates
 from src.features.transform import TimeSeriesFeatureEngineer
-from src.utils.utils import evaluate_metrics, plot_predictions, promote_to_production
+from src.utils.utils import evaluate_metrics, plot_predictions, promote_to_production, save_data_scope
 from src.utils.utils import build_reference_drift_profile
 
 sklearn.set_config(transform_output="pandas")
@@ -71,12 +71,10 @@ def run_train():
     if target_col not in df.columns:
         raise ValueError(f"input data must include target column '{target_col}'")
     
-    # # Save data to local directory for reference
-    # data_dir = settings.RAW_DATA_DIR
-    # os.makedirs(data_dir, exist_ok=True)
-    # raw_data_path = data_dir / "train_data.csv"
-    # df.to_csv(raw_data_path, index=False)
-    # logger.info(f"Raw training data saved to: {raw_data_path}")
+    # Save data scope to local directory for reference
+    scope_path = settings.RAW_DATA_DIR / "data_scope.json"
+    logger.info(f"Saving data scope metadata to: {scope_path }")
+    save_data_scope(df)
     
     # 2) Feature Engineering
     logger.info("Generating engineered features (offline)")
@@ -139,6 +137,9 @@ def run_train():
     
     with mlflow.start_run(run_name=parent_run_name) as parent_run:
         logger.info(f"Started Parent MLflow Run: {parent_run_name}")
+
+        # Log training data scope as artifact
+        mlflow.log_artifact(scope_path, artifact_path="data_scope")
 
         # 9) Iterate models, grid search, log to MLflow
         model_results = []
