@@ -1,6 +1,6 @@
 {
-  "model_name": "LinearRegression",
-  "mlflow_version": "1",
-  "MAE": 443.7485593209567,
-  "promoted_at": "2026-01-11T04:07:47.879825+00:00"
+  "model_name": "RandomForest",
+  "mlflow_version": "3",
+  "MAE": 84.93760400881833,
+  "promoted_at": "2026-01-12T09:40:10.943439+00:00"
 }
