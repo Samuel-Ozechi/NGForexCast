@@ -8,6 +8,7 @@ import os, json, joblib, shutil
 from src.config.settings import Settings
 from src.monitoring.evidently_profile import save_reference_profile
 from sklearn.base import BaseEstimator
+import mlflow
 
 
 settings = Settings()
@@ -74,5 +75,53 @@ def build_reference_drift_profile(df: pd.DataFrame, model: BaseEstimator) -> str
 
     # 5. Get proxy drift baseline
     save_reference_profile(reference_df)
+
+    # 3. Extract key metrics for MLflow Table
+    with open(settings.REFERENCE_PROFILE_PATH, "r") as f:
+        report_data = json.load(f)
+
+    summary_metrics = []
+    
+    for metric in report_data.get("metrics", []):
+        name = metric.get("metric")
+        result = metric.get("result", {})
+        
+        # Extract Drift Summary
+        if name == "DatasetDriftMetric":
+            summary_metrics.append({
+                "category": "Data Drift",
+                "metric_name": "Dataset Drift Detected",
+                "value": str(result.get("dataset_drift")),
+                "details": f"Drifted: {result.get('number_of_drifted_columns')}/{result.get('number_of_columns')}"
+            })
+            
+        # Extract Column Specific Drift (e.g., 'rate')
+        elif name == "DataDriftTable":
+            drift_cols = result.get("drift_by_columns", {})
+            for col, data in drift_cols.items():
+                summary_metrics.append({
+                    "category": "Data Drift",
+                    "metric_name": f"Column Drift: {col}",
+                    "value": str(data.get("drift_detected")),
+                    "details": f"Score: {data.get('drift_score'):.4f} ({data.get('stattest_name')})"
+                })
+
+        # Extract Regression Quality
+        elif name == "RegressionQualityMetric":
+            curr = result.get("current", {})
+            for m_name in ["mae", "rmse", "r2_score"]:
+                val = curr.get(m_name) if m_name != "mae" else curr.get("mean_abs_error")
+                summary_metrics.append({
+                    "category": "Regression Quality",
+                    "metric_name": m_name.upper(),
+                    "value": f"{val:.4f}" if val is not None else "N/A",
+                    "details": "Reference Baseline"
+                })
+
+    # Convert to DataFrame for MLflow
+    summary_df = pd.DataFrame(summary_metrics)
+    
+    # Log the summary table to the active MLflow run
+    mlflow.log_table(data=summary_df, artifact_file="monitoring/reference_profile.json")
 
     return str(settings.REFERENCE_PROFILE_PATH)

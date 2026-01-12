@@ -286,7 +286,7 @@ def run_train():
                         }
                     )
                     build_reference_drift_profile(df, inference_pipeline)
-                    mlflow.log_artifact(settings.REFERENCE_PROFILE_PATH, artifact_path="monitoring")
+                    # mlflow.log_artifact(settings.REFERENCE_PROFILE_PATH, artifact_path="monitoring")
                     shutil.copy(temp_plot_path, settings.TRAINING_PLOT_PATH)
 
                 else:
@@ -308,7 +308,7 @@ def run_train():
                     }
                 )
                 build_reference_drift_profile(df, inference_pipeline)
-                mlflow.log_artifact(settings.REFERENCE_PROFILE_PATH, artifact_path="monitoring")
+                # mlflow.log_artifact(settings.REFERENCE_PROFILE_PATH, artifact_path="monitoring")
                 shutil.copy(temp_plot_path, settings.TRAINING_PLOT_PATH)
 
     return best_overall

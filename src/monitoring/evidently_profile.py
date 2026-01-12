@@ -14,7 +14,7 @@ settings = Settings()
 def save_reference_profile(train_df: pd.DataFrame):
     column_mapping = ColumnMapping(
         target="rate",
-        prediction="rate",
+        prediction="prediction",
         numerical_features=["rate"],
         categorical_features=[]
     )
