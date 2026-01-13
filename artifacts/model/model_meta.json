@@ -1,6 +1,6 @@
 {
   "model_name": "RandomForest",
-  "mlflow_version": "3",
+  "mlflow_version": "7",
   "MAE": 84.93760400881833,
-  "promoted_at": "2026-01-12T09:40:10.943439+00:00"
+  "promoted_at": "2026-01-13T02:17:14.621250+00:00"
 }
