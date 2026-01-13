@@ -8,13 +8,28 @@ from evidently.metric_preset import DataDriftPreset, RegressionPreset
 from evidently import ColumnMapping
 from src.config.settings import Settings
 from src.utils.utils import get_prediction_data, get_predictions
+import logging
 
-settings = Settings()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def run_drift_check(live_df: pd.DataFrame):
+settings = Settings()   
+
+def run_drift_check():
+    logger.info("Starting drift check...")
+
+    logger.info("Loading reference data profile...")
     ref_path = settings.MONITORING_DIR / "reference_data.csv"
     if not ref_path.exists():
         raise FileNotFoundError("Reference profile not found")
+    
+    logger.info("Loading prediction data...")
+    live_df = get_prediction_data()  
+    logger.info("Generating live predictions...")
+
+    pipeline = joblib.load(settings.MODEL_PATH)
+    live_df = get_predictions(live_df, pipeline)
+    logger.info("Live predictions generated.")
 
     column_mapping = ColumnMapping(
         target="rate",
@@ -49,23 +64,8 @@ def run_drift_check(live_df: pd.DataFrame):
 
 
 if __name__ == "__main__":
-    # Example usage
-    print("Starting drift check...")
-    # Fetch live data
-    data = get_prediction_data()  
-    print("Fetched data for drift check:", data.shape)
-
-    # Load inference pipeline
-    print("Loading inference pipeline...")
-    pipeline = joblib.load(settings.MODEL_PATH)
-
-    print("Generating live predictions...")
-    # Get live predictions
-    live_df = get_predictions(data, pipeline)
-    print("Live predictions generated:", live_df.shape)
 
     # Run drift check
-    print("Running drift check...")
-    drift_report = run_drift_check(live_df)
+    drift_report = run_drift_check()
     print(json.dumps(drift_report, indent=4))
 
