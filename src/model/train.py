@@ -71,11 +71,10 @@ def run_train():
     if target_col not in df.columns:
         raise ValueError(f"input data must include target column '{target_col}'")
     
-    # Use only 80% of df
-    df = df.sort_values("date").reset_index(drop=True)
-    cutoff_index = int(len(df) * 0.8)
-    df = df.iloc[:cutoff_index].copy()
-    
+    # # Use only 80% of df
+    # df = df.sort_values("date").reset_index(drop=True)
+    # cutoff_index = int(len(df) * 0.8)
+    # df = df.iloc[:cutoff_index].copy()
     
     # Save data scope to local directory for reference
     scope_path = settings.RAW_DATA_DIR / "data_scope.json"
