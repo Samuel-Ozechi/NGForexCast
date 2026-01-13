@@ -87,7 +87,7 @@ def build_reference_drift_profile(df: pd.DataFrame, pipeline: BaseEstimator) -> 
 
     # Save the actual data so drift.py can read it later
     
-    ref_data_path = settings.REFERENCE_DATA_PATH / "reference_data.csv"
+    ref_data_path = settings.REFERENCE_DATA_PATH
     ref_data_path .parent.mkdir(parents=True, exist_ok=True)
     reference_df.to_csv(ref_data_path, index=False)
     
