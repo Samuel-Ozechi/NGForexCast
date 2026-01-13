@@ -48,6 +48,7 @@ class Settings(BaseSettings):
 
     # --- Monitoring ---
     MONITORING_DIR: Path = BASE_DIR / "artifacts/monitoring"
+    REFERENCE_DATA_PATH: Path = MONITORING_DIR / "reference_data.csv"
     DRIFT_REPORT_PATH: Path = MONITORING_DIR / "drift_report.html"
     DRIFT_LOG_PATH: Path = MONITORING_DIR / "drift_log.csv"
     REFERENCE_PROFILE_PATH: Path = MONITORING_DIR / "reference_profile.json"
