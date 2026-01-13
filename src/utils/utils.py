@@ -11,6 +11,7 @@ from sklearn.base import BaseEstimator
 import mlflow
 from datetime import datetime, timezone
 import logging
+from src.data.ingest import fetch_exchange_rates
 
 
 settings = Settings()
@@ -18,7 +19,7 @@ PROD_PATH = settings.PROD_PATH
 MODEL_PATH = settings.MODEL_PATH
 META_PATH = settings.META_PATH
 RAW_DATA_DIR = settings.RAW_DATA_DIR
-os.makedirs(PROD_PATH, exist_ok=True)
+os.makedirs(PROD_PATH, exist_ok=True) 
 logger = logging.getLogger(__name__)
 
 
@@ -53,34 +54,47 @@ def promote_to_production(inference_pipeline, metadata):
     with open(META_PATH, "w") as f:
         json.dump(metadata, f, indent=2)
 
-def build_reference_drift_profile(df: pd.DataFrame, model: BaseEstimator) -> str:
+def get_predictions(df: pd.DataFrame, pipeline: BaseEstimator) -> pd.DataFrame:
     """
-    Generates in-sample predictions using the trained inference pipeline,
-    ensuring lengths match by using the transformer's output.
+    Transforms input data using the feature engineering step of the model pipeline.
     """
     # 1. Weekly Resampling (matching what the transformer expects internally)
     df["date"] = pd.to_datetime(df["date"])
-    df_resampled = df.set_index("date").sort_index()  
-    df_resampled = df_resampled["rate"].resample("W-FRI").last().to_frame().reset_index()
+    df = df.set_index("date").sort_index()  
+    df_resampled = df["rate"].resample("W-FRI").last().to_frame().reset_index()
 
-    # 2. Get the transformed data (to know which rows were kept after dropna)
-    # The first step of your model pipeline is the TimeSeriesFeatureEngineer
-    transformer = model.named_steps["feat_engineer"]
+    # 2. Apply feature engineering transformation
+    transformer = pipeline.named_steps["feat_engineer"]
     transformed_df = transformer.transform(df_resampled)
-    
+
     # 3. Generate predictions
     # The model.predict(df_resampled) internally runs transform() then predict()
-    preds = model.predict(df_resampled)
+    preds = pipeline.predict(df_resampled)
 
     # 4. ALIGNMENT: Create the reference dataframe using ONLY the rows 
     # that survived the feature engineering (the 'transformed_df' rows)
     reference_df = transformed_df[["date", "rate"]].copy()
     reference_df["prediction"] = preds
+    return reference_df
 
-    # 5. Get proxy drift baseline
+def build_reference_drift_profile(df: pd.DataFrame, pipeline: BaseEstimator) -> str:
+    """
+    Generates in-sample predictions using the trained inference pipeline,
+    ensuring lengths match by using the transformer's output.
+    """
+    # Get in-sample predictions
+    reference_df = get_predictions(df, pipeline)
+
+    # Save the actual data so drift.py can read it later
+    
+    ref_data_path = settings.REFERENCE_DATA_PATH / "reference_data.csv"
+    ref_data_path .parent.mkdir(parents=True, exist_ok=True)
+    reference_df.to_csv(ref_data_path, index=False)
+    
+    # Get proxy drift baseline
     save_reference_profile(reference_df)
 
-    # 3. Extract key metrics for MLflow Table
+    # Extract key metrics for MLflow Table
     with open(settings.REFERENCE_PROFILE_PATH, "r") as f:
         report_data = json.load(f)
 
@@ -152,3 +166,14 @@ def save_data_scope(df: pd.DataFrame) -> dict:
         
     logger.info(f"Data scope saved: {scope['start_date']} to {scope['end_date']}")
     return scope
+
+def get_prediction_data():
+    # Load the training scope
+    with open(RAW_DATA_DIR / "data_scope.json", "r") as f:
+        scope = json.load(f)
+    
+    test_start_date = pd.to_datetime(scope["start_date"]) + pd.Timedelta(days=1)
+
+    data = fetch_exchange_rates(start_date=test_start_date.strftime("%Y-%m-%d"))
+
+    return data
