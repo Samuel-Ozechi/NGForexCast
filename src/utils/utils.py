@@ -73,9 +73,9 @@ def get_predictions(df: pd.DataFrame, pipeline: BaseEstimator) -> pd.DataFrame:
 
     # 4. ALIGNMENT: Create the reference dataframe using ONLY the rows 
     # that survived the feature engineering (the 'transformed_df' rows)
-    reference_df = transformed_df[["date", "rate"]].copy()
-    reference_df["prediction"] = preds
-    return reference_df
+    predicted_df = transformed_df[["date", "rate"]].copy()
+    predicted_df["prediction"] = preds
+    return predicted_df
 
 def build_reference_drift_profile(df: pd.DataFrame, pipeline: BaseEstimator) -> str:
     """
