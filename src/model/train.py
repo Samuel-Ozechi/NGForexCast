@@ -58,10 +58,11 @@ def run_train():
     os.getenv("DAGSHUB_USER")
 
     dagshub.init(
-        repo_owner="Chiebukar",
-        repo_name="NGForexCast",
-        mlflow=True,
-    )
+    repo_owner=os.getenv("DAGSHUB_USER"),
+    repo_name="NGForexCast",
+    mlflow=True,
+    token=os.getenv("DAGSHUB_TOKEN")
+)
 
     # MLflow experiment setup
     settings = Settings()
