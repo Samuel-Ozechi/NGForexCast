@@ -29,7 +29,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, ExtraTreesRegressor
 from xgboost import XGBRegressor
-from lightgbm import LGBMRegressor
+# from lightgbm import LGBMRegressor  
 from catboost import CatBoostRegressor
 
 import dagshub
@@ -128,9 +128,9 @@ def run_train():
         ("XGBoost", XGBRegressor(random_state=random_state, objective="reg:squarederror"), {
             "n_estimators": [100, 200], "learning_rate": [0.01, 0.05], "max_depth": [3, 5]
         }),
-        ("LightGBM", LGBMRegressor(random_state=random_state, verbosity=-1), {
-            "n_estimators": [100, 200], "learning_rate": [0.01, 0.05], "max_depth": [3, 5]
-        }),
+        # ("LightGBM", LGBMRegressor(random_state=random_state, verbosity=-1), {
+        #     "n_estimators": [100, 200], "learning_rate": [0.01, 0.05], "max_depth": [3, 5]
+        # }),
         ("CatBoost", CatBoostRegressor(random_state=random_state, verbose=0, allow_writing_files=False), {
             "iterations": [100, 200], "learning_rate": [0.01, 0.05], "depth": [3, 5]
         }),
