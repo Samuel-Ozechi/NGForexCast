@@ -54,7 +54,15 @@ def run_train():
     """Main training pipeline function."""
 
     # Initialize DagsHub MLflow integration
-    dagshub.init(repo_owner='Chiebukar', repo_name='NGForexCast', mlflow=True)
+    os.getenv("DAGSHUB_TOKEN")
+    os.getenv("DAGSHUB_USER")
+
+    dagshub.init(
+        repo_owner="Chiebukar",
+        repo_name="NGForexCast",
+        mlflow=True,
+        force=True
+    )
 
     # MLflow experiment setup
     settings = Settings()
