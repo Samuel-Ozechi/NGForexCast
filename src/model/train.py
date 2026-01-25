@@ -50,10 +50,13 @@ sklearn.set_config(transform_output="pandas")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
 
-# Initialize DagsHub MLflow integration
-dagshub.init(repo_owner='Chiebukar', repo_name='NGForexCast', mlflow=True)
-
 def run_train():
+    """Main training pipeline function."""
+
+    # Initialize DagsHub MLflow integration
+    dagshub.init(repo_owner='Chiebukar', repo_name='NGForexCast', mlflow=True)
+
+    # MLflow experiment setup
     settings = Settings()
     experiment_name = settings.MLFLOW_EXPERIMENT_NAME
     mlflow.set_experiment(experiment_name)
