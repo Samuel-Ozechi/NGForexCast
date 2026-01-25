@@ -61,7 +61,6 @@ def run_train():
         repo_owner="Chiebukar",
         repo_name="NGForexCast",
         mlflow=True,
-        force=True
     )
 
     # MLflow experiment setup
