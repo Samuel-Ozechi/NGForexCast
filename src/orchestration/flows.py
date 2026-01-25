@@ -2,13 +2,9 @@
 
 from prefect import flow
 from src.orchestration.tasks import (
-     run_forecast, run_monitor, retrain
+     run_monitor, retrain
 )
 
-@flow(name="daily_forecast_flow")
-def daily_forecast_flow(days: int = 1):
-    forecasts = run_forecast(days)
-    return forecasts
 
 @flow(name="monitor_flow")
 def monitor_flow():
@@ -22,9 +18,6 @@ def retrain_flow(reason: str):
     retrain()
 
 @flow(name="autonomous_forex_ai")
-def autonomous_forex_ai(days: int = 1):
-    # # Generate daily forecasts
-    # daily_forecast_flow(days)
-
+def autonomous_forex_ai():
     # Check health and retrain if necessary
     monitor_flow()

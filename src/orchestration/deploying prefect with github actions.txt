@@ -1,5 +1,33 @@
-Step 1: Connect to the "Brain" (Prefect Cloud)First, you must link your local development environment to the cloud so they can share the deployment details.Go to Prefect Cloud and create a free account.In your terminal, run:Bashprefect login
-Choose "Log in with a browser" and authorize. Your terminal is now authenticated.Step 2: Build the "Instructions" (The Deployment)You need to tell Prefect what code to run. Since GitHub will be our "Chef," we need to tell Prefect to look for a specific Work Pool.Create a Work Pool in the Prefect UI:Go to Work Pools > Create.Select Process (this is the simplest type).Name it github-actions-pool.Build and Apply your deployment from your laptop:Bash# Build the manifest pointing to your pool
+
+uvx prefect-cloud deploy src/orchestration/flows.py:autonomous_forex_ai \
+ --from Chiebukar/NGForexCast \
+ --name ngn_forex_autonomous \
+ --with-requirements requirements.txt \
+ --env EXCHANGE_RATE_API="2743e5b334baac7ccf84a41c" \
+ --env SUPABASE_DB_URL="postgresql://postgres.geekboftdzfqpywigrnw:Saviour4sxxyxyyyxyyxyxyx@aws-1-eu-north-1.pooler.supabase.com:5432/postgres"
+
+
+
+uvx prefect-cloud deploy src/orchestration/flows.py:autonomous_forex_ai \
+ --from Chiebukar/NGForexCast \
+ --name ngn_forex_autonomous \
+ --image ng-forex-monitor:latest \
+ --env EXCHANGE_RATE_API="2743e5b334baac7ccf84a41c" \
+ --env SUPABASE_DB_URL="postgresql://postgres.geekboftdzfqpywigrnw:Saviour4sxxyxyyyxyyxyxyx@aws-1-eu-north-1.pooler.supabase.com:5432/postgres"
+
+
+
+
+
+
+Step 1: Connect to the Prefect Cloud. 
+** In your terminal, run: prefect cloud login
+** Choose "Log in with a browser" and authorize. 
+Your terminal is now authenticated.
+
+Step 2: Build the Instructions (The Deployment). You need to tell Prefect what code to run.
+Create a Work Pool in the Prefect UI
+a) Go to Work Pools > Click Create >uvx prefect-cloud login Select Process (this is the simplest type).Name it github-actions-pool.Build and Apply your deployment from your laptop:Bash# Build the manifest pointing to your pool
 prefect deployment build src/orchestration/flows.py:autonomous_forex_ai \
 -n github-worker-deploy \
 -p github-actions-pool
