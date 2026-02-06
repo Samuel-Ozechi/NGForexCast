@@ -266,10 +266,9 @@ def run_train():
             # We will log the final_preproc_and_model and register that (feat_engineer is separate; but we include it by saving the full joblib)
             # Log the model with the 'name' and 'input_example'
             model_info = mlflow.sklearn.log_model(
-                sk_model=final_preproc_and_model, 
+                sk_model=inference_pipeline, 
                 name="sklearn_model",  
                 input_example=input_example,
-    
                 registered_model_name="ngn_us_exchange_model"
             )
             
