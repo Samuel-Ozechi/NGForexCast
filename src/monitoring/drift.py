@@ -7,7 +7,7 @@ from evidently.report import Report
 from evidently.metric_preset import DataDriftPreset, RegressionPreset
 from evidently import ColumnMapping
 from src.config.settings import Settings
-from src.utils.utils import get_prediction_data, get_predictions
+from src.utils.utils import get_prediction_data, get_predictions, _setup_mlflow, _load_mlflow_model
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -18,16 +18,18 @@ settings = Settings()
 def run_drift_check():
     logger.info("Starting drift check...")
 
-    logger.info("Loading reference data profile...")
+    logger.info("Loading reference data...")
     ref_path = settings.MONITORING_DIR / "reference_data.csv"
     if not ref_path.exists():
-        raise FileNotFoundError("Reference profile not found")
+        raise FileNotFoundError("Reference data not found")
     
     logger.info("Loading prediction data...")
     live_df = get_prediction_data()  
     logger.info("Generating live predictions...")
 
-    pipeline = joblib.load(settings.MODEL_PATH)
+    _setup_mlflow()
+    pipeline =_load_mlflow_model()
+
     live_df = get_predictions(live_df, pipeline)
     logger.info("Live predictions generated.")
 
