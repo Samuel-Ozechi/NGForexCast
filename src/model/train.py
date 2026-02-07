@@ -311,7 +311,7 @@ def run_train():
                 # If no staging alias exists, promote this first one
                 logger.info("No current staging model found. Promoting as first champion.")
                 client.set_registered_model_alias(model_name, "staging", new_version)
-                client.set_registered_model_alias(model_name, "staging", new_version)
+                
 
                 promote_to_production(
                     inference_pipeline,
