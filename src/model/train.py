@@ -42,7 +42,7 @@ from src.config.settings import Settings
 from src.data.ingest import fetch_exchange_rates
 from src.features.transform import TimeSeriesFeatureEngineer
 from src.utils.utils import evaluate_metrics, plot_predictions, promote_to_production, save_data_scope
-from src.utils.utils import build_reference_drift_profile
+from src.utils.utils import build_reference_drift_profile, _setup_mlflow
 
 sklearn.set_config(transform_output="pandas")
 
@@ -52,23 +52,12 @@ logger = logging.getLogger(__name__)
 
 def run_train():
     """Main training pipeline function."""
-
-    # Initialize DagsHub MLflow integration
-    token = os.environ.get("DAGSHUB_USER_TOKEN")
-    dagshub.auth.add_app_token(token)
-
-    dagshub.init(
-    repo_owner=os.getenv("DAGSHUB_USER"),
-    repo_name="NGForexCast",
-    mlflow=True,
-)
-
-    # MLflow experiment setup
     settings = Settings()
+
+    # MLflow experiment setup with dagshub
+    _setup_mlflow()
     experiment_name = settings.MLFLOW_EXPERIMENT_NAME
     mlflow.set_experiment(experiment_name)
-    # mlflow.set_tracking_uri("file:./mlruns")
-    mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
     logger.info(f"MLflow tracking uri: {settings.MLFLOW_TRACKING_URI}. Experiment: {experiment_name}")
 
     # 1) Load input data from DB
@@ -269,10 +258,10 @@ def run_train():
                 sk_model=inference_pipeline, 
                 name="sklearn_model",  
                 input_example=input_example,
-                registered_model_name="ngn_us_exchange_model"
+                registered_model_name=settings.MODEL_NAME
             )
             
-            model_name = "ngn_us_exchange_model"
+            model_name = settings.MODEL_NAME
             new_version = model_info.registered_model_version
             new_mae = best_overall["metrics"]["MAE"]
             client = MlflowClient()
