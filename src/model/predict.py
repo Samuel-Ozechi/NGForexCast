@@ -14,6 +14,8 @@ from mlflow.tracking import MlflowClient
 
 from src.config.settings import Settings
 from src.data.ingest import fetch_exchange_rates
+from src.utils.utils import _setup_mlflow
+
 
 # logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
@@ -23,31 +25,31 @@ logger = logging.getLogger(__name__)
 class ForexInference:
     def __init__(self):
         self.settings = Settings()
-        self.model_name = "ngn_us_exchange_model"
+        self.model_name = self.settings.MODEL_NAME
 
-        self.artifact_dir = Path("artifacts/model")
+        self.artifact_dir = self.settings.PROD_PATH
         self.artifact_dir.mkdir(parents=True, exist_ok=True)
 
-        self.local_model_path = self.artifact_dir / "inference_pipeline.joblib"
-        self.meta_path = self.artifact_dir / "model_meta.json"
+        self.local_model_path = self.settings.MODEL_PATH
+        self.meta_path = self.settings.META_PATH
 
-        self._setup_mlflow()
+        _setup_mlflow()
         self.client = MlflowClient()
 
 
-    # MLflow setup
-    def _setup_mlflow(self):
-        token = os.environ.get("DAGSHUB_USER_TOKEN")
-        dagshub.auth.add_app_token(token)
+    # # MLflow setup
+    # def _setup_mlflow(self):
+    #     token = os.environ.get("DAGSHUB_USER_TOKEN")
+    #     dagshub.auth.add_app_token(token)
 
-        dagshub.init(
-            repo_owner=os.getenv("DAGSHUB_USER"),
-            repo_name="NGForexCast",
-            mlflow=True,
-        )
+    #     dagshub.init(
+    #         repo_owner=os.getenv("DAGSHUB_USER"),
+    #         repo_name="NGForexCast",
+    #         mlflow=True,
+    #     )
 
-        mlflow.set_tracking_uri(self.settings.MLFLOW_TRACKING_URI)
-        logger.info("MLflow tracking configured")
+    #     mlflow.set_tracking_uri(self.settings.MLFLOW_TRACKING_URI)
+    #     logger.info("MLflow tracking configured")
 
 
     # Model version helpers
@@ -162,7 +164,7 @@ class ForexInference:
 
 if __name__ == "__main__":
     inferencer = ForexInference()
-    print(inferencer.recursive_forecast(steps=12))
+    print(inferencer.recursive_forecast(steps=4))
 
 
 ### Prediction code without MLflow but with local model (for reference, not used in final version)   
