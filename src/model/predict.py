@@ -14,7 +14,7 @@ from mlflow.tracking import MlflowClient
 
 from src.config.settings import Settings
 from src.data.ingest import fetch_exchange_rates
-from src.utils.utils import _setup_mlflow, _get_staged_model_version, _get_local_model_version, _save_model_meta
+from src.utils.utils import _setup_mlflow, _get_staged_model_version, _get_local_model_version, _save_model_meta, _load_mlflow_model
 
 
 # logging setup
@@ -35,39 +35,6 @@ class ForexInference:
 
         _setup_mlflow()
         self.client = MlflowClient()
-
-
-    # # Model version helpers
-    # def _get_staged_model_version(self) -> str:
-    #     """Return MLflow version currently pointed to by 'staging' alias."""
-    #     mv = self.client.get_model_version_by_alias(
-    #         name=self.model_name,
-    #         alias="staging",
-    #     )
-    #     return mv.version
-
-    # def _get_local_model_version(self) -> str:
-    #     if not self.meta_path.exists():
-    #         return None
-
-    #     with open(self.meta_path, "r") as f:
-    #         meta = json.load(f)
-
-    #     return meta.get("mlflow_version")
-
-    # def _save_model_meta(self, model_version):
-    
-
-    #     meta = {
-    #         "model_name": self.model_name,
-    #         "mlflow_version": model_version,
-    #     }
-
-    #     with open(self.meta_path, "w") as f:
-    #         json.dump(meta, f, indent=2)
-
-    #     logger.info(f"Saved model metadata: {meta}")
-
     
     # version-aware model loading
     def _load_pipeline(self):
@@ -88,8 +55,7 @@ class ForexInference:
         # Case 2: Version mismatch or missing local model → download
         logger.info("Local model missing or outdated — downloading from MLflow")
 
-        model_uri = f"models:/{self.model_name}@staging"
-        pipeline = mlflow.sklearn.load_model(model_uri)
+        pipeline = _load_mlflow_model()
 
         joblib.dump(pipeline, self.local_model_path)
         _save_model_meta(staged_version)
