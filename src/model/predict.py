@@ -37,21 +37,6 @@ class ForexInference:
         self.client = MlflowClient()
 
 
-    # # MLflow setup
-    # def _setup_mlflow(self):
-    #     token = os.environ.get("DAGSHUB_USER_TOKEN")
-    #     dagshub.auth.add_app_token(token)
-
-    #     dagshub.init(
-    #         repo_owner=os.getenv("DAGSHUB_USER"),
-    #         repo_name="NGForexCast",
-    #         mlflow=True,
-    #     )
-
-    #     mlflow.set_tracking_uri(self.settings.MLFLOW_TRACKING_URI)
-    #     logger.info("MLflow tracking configured")
-
-
     # Model version helpers
     def _get_staged_model_version(self) -> str:
         """Return MLflow version currently pointed to by 'staging' alias."""
