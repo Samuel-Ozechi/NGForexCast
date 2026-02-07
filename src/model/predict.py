@@ -14,7 +14,7 @@ from mlflow.tracking import MlflowClient
 
 from src.config.settings import Settings
 from src.data.ingest import fetch_exchange_rates
-from src.utils.utils import _setup_mlflow
+from src.utils.utils import _setup_mlflow, _get_staged_model_version, _get_local_model_version, _save_model_meta
 
 
 # logging setup
@@ -37,42 +37,42 @@ class ForexInference:
         self.client = MlflowClient()
 
 
-    # Model version helpers
-    def _get_staged_model_version(self) -> str:
-        """Return MLflow version currently pointed to by 'staging' alias."""
-        mv = self.client.get_model_version_by_alias(
-            name=self.model_name,
-            alias="staging",
-        )
-        return mv.version
+    # # Model version helpers
+    # def _get_staged_model_version(self) -> str:
+    #     """Return MLflow version currently pointed to by 'staging' alias."""
+    #     mv = self.client.get_model_version_by_alias(
+    #         name=self.model_name,
+    #         alias="staging",
+    #     )
+    #     return mv.version
 
-    def _get_local_model_version(self) -> str:
-        if not self.meta_path.exists():
-            return None
+    # def _get_local_model_version(self) -> str:
+    #     if not self.meta_path.exists():
+    #         return None
 
-        with open(self.meta_path, "r") as f:
-            meta = json.load(f)
+    #     with open(self.meta_path, "r") as f:
+    #         meta = json.load(f)
 
-        return meta.get("mlflow_version")
+    #     return meta.get("mlflow_version")
 
-    def _save_model_meta(self, model_version):
+    # def _save_model_meta(self, model_version):
     
 
-        meta = {
-            "model_name": self.model_name,
-            "mlflow_version": model_version,
-        }
+    #     meta = {
+    #         "model_name": self.model_name,
+    #         "mlflow_version": model_version,
+    #     }
 
-        with open(self.meta_path, "w") as f:
-            json.dump(meta, f, indent=2)
+    #     with open(self.meta_path, "w") as f:
+    #         json.dump(meta, f, indent=2)
 
-        logger.info(f"Saved model metadata: {meta}")
+    #     logger.info(f"Saved model metadata: {meta}")
 
     
     # version-aware model loading
     def _load_pipeline(self):
-        staged_version = self._get_staged_model_version()
-        local_version = self._get_local_model_version()
+        staged_version = _get_staged_model_version()
+        local_version = _get_local_model_version()
 
         logger.info(f"Staged model version: {staged_version}")
         logger.info(f"Local model version: {local_version}")
@@ -92,7 +92,7 @@ class ForexInference:
         pipeline = mlflow.sklearn.load_model(model_uri)
 
         joblib.dump(pipeline, self.local_model_path)
-        self._save_model_meta(staged_version)
+        _save_model_meta(staged_version)
 
         logger.info(
             f"Downloaded and cached model version {staged_version}"
