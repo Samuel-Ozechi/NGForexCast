@@ -29,11 +29,13 @@ class Settings(BaseSettings):
     FEATURE_DATA_DIR: Path = DATA_DIR / "03_features"
     MODELS_DIR: Path = BASE_DIR / "models"
     LOGS_DIR: Path = BASE_DIR / "logs"
+    PROJECT_NAME: Path = "NGForexCast"
 
    # --- Production model paths ---
     PROD_PATH: Path = BASE_DIR / "artifacts/model"
-    MODEL_PATH: str = os.path.join(PROD_PATH, "inference_pipeline.joblib")
-    META_PATH: str = os.path.join(PROD_PATH, "model_meta.json")
+    MODEL_PATH: Path = PROD_PATH / "inference_pipeline.joblib"
+    META_PATH: Path = PROD_PATH / "model_meta.json"
+    MODEL_NAME: str = "ngn_us_exchange_model"
 
    # Plot paths
     PLOTS_DIR: Path = BASE_DIR / "artifacts/plots"
