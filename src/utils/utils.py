@@ -12,6 +12,8 @@ import mlflow
 from datetime import datetime, timezone
 import logging
 from src.data.ingest import fetch_exchange_rates
+import dagshub
+from mlflow.tracking import MlflowClient
 
 
 settings = Settings()
@@ -22,6 +24,20 @@ RAW_DATA_DIR = settings.RAW_DATA_DIR
 os.makedirs(PROD_PATH, exist_ok=True) 
 logger = logging.getLogger(__name__)
 
+
+# MLflow setup
+def _setup_mlflow():
+    token = os.environ.get("DAGSHUB_USER_TOKEN")
+    dagshub.auth.add_app_token(token)
+
+    dagshub.init(
+        repo_owner=os.getenv("DAGSHUB_USER"),
+        repo_name="NGForexCast",
+        mlflow=True,
+    )
+
+    mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
+    logger.info("MLflow tracking configured")
 
 def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
     mae = mean_absolute_error(y_true, y_pred)
@@ -53,6 +69,38 @@ def promote_to_production(inference_pipeline, metadata):
     os.replace(tmp, MODEL_PATH)          # atomic swap
     with open(META_PATH, "w") as f:
         json.dump(metadata, f, indent=2)
+
+# Model version helpers
+def _get_staged_model_version() -> str:
+    """Return MLflow version currently pointed to by 'staging' alias."""
+    client = MlflowClient()
+    mv = client.get_model_version_by_alias(
+        name=settings.MODEL_NAME,
+        alias="staging",
+    )
+    return mv.version
+
+def _get_local_model_version() -> str:
+    meta_path = settings.META_PATH
+    if not meta_path.exists():
+        return None
+
+    with open(meta_path, "r") as f:
+        meta = json.load(f)
+
+    return meta.get("mlflow_version")
+
+def _save_model_meta(model_version):
+
+    meta = {
+        "model_name": settings.MODEL_NAME,
+        "mlflow_version": model_version,
+    }
+
+    with open(settings.META_PATH, "w") as f:
+        json.dump(meta, f, indent=2)
+
+    logger.info(f"Saved model metadata: {meta}")
 
 def get_predictions(df: pd.DataFrame, pipeline: BaseEstimator) -> pd.DataFrame:
     """
@@ -177,3 +225,4 @@ def get_prediction_data():
     data = fetch_exchange_rates(start_date=test_start_date.strftime("%Y-%m-%d"))
 
     return data
+
