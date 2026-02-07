@@ -70,11 +70,6 @@ def run_train():
     if target_col not in df.columns:
         raise ValueError(f"input data must include target column '{target_col}'")
     
-    # # Use only 80% of df
-    # df = df.sort_values("date").reset_index(drop=True)
-    # cutoff_index = int(len(df) * 0.8)
-    # df = df.iloc[:cutoff_index].copy()
-    
     # Save data scope to local directory for reference
     scope_path = settings.RAW_DATA_DIR / "data_scope.json"
     logger.info(f"Saving data scope metadata to: {scope_path }")
@@ -86,7 +81,7 @@ def run_train():
     df_feat = feature_engineer.transform(df)
     df_feat.columns = [c.lower() for c in df_feat.columns]
 
-    # 4) Train/Test Split
+    # 3) Train/Test Split
     logger.info("Preparing train and test sets")
     df_feat = df_feat.sort_values("date").reset_index(drop=True)
     df_feat["date"] = pd.to_datetime(df_feat["date"])
@@ -99,17 +94,17 @@ def run_train():
     logger.info(f"Test range: {test_df.index.min().date()} to {test_df.index.max().date()}")
     logger.info(f"Train shape: {train_df.shape}, Test shape: {test_df.shape}")
 
-    # 5) Prepare X, y
+    # 4) Prepare X, y
     feature_cols = [c for c in df_feat.columns if c != target_col]
     X_train, y_train = train_df[feature_cols], train_df[target_col]
     X_test, y_test = test_df[feature_cols], test_df[target_col]
 
-    # 6) Preprocessing
+    # 5) Preprocessing
     logger.info("Data preprocessing")
     numeric_features = X_train.select_dtypes(include=[np.number]).columns.tolist()
     preproc = ColumnTransformer([("num", StandardScaler(), numeric_features)], remainder="drop")
 
-    # 7) Model candidates
+    # 6) Model candidates
     logger.info("Model Training and Hyperparameter Tuning")
     random_state = settings.RANDOM_STATE   
     models_and_grids = [
@@ -135,7 +130,7 @@ def run_train():
         }),
     ]
 
-    # 8) CV strategy
+    # 7) CV strategy
     cv = TimeSeriesSplit(n_splits=5)
     parent_run_name = f"Retraining_Session_{datetime.now(timezone.utc).strftime('%Y-%m-%d_%H%M')}"
     
