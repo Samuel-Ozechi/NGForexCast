@@ -1,12 +1,15 @@
 # src/api/predict.py
 
 import os
+import json
 import logging
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
+from pathlib import Path
 
 import pandas as pd
 import mlflow
 import dagshub
+import joblib
 from mlflow.tracking import MlflowClient
 
 from src.config.settings import Settings
@@ -21,54 +24,103 @@ class ForexInference:
     def __init__(self):
         self.settings = Settings()
         self.model_name = "ngn_us_exchange_model"
+
+        self.artifact_dir = Path("artifacts/model")
+        self.artifact_dir.mkdir(parents=True, exist_ok=True)
+
+        self.local_model_path = self.artifact_dir / "inference_pipeline.joblib"
+        self.meta_path = self.artifact_dir / "model_meta.json"
+
         self._setup_mlflow()
+        self.client = MlflowClient()
 
+
+    # MLflow setup
     def _setup_mlflow(self):
-        """Configure connection to DagsHub MLflow Remote"""
-
-        # Initialize DagsHub MLflow integration
         token = os.environ.get("DAGSHUB_USER_TOKEN")
         dagshub.auth.add_app_token(token)
 
         dagshub.init(
-        repo_owner=os.getenv("DAGSHUB_USER"),
-        repo_name="NGForexCast",
-        mlflow=True,
-    )
-        
-        # MLflow experiment setup
-        settings = Settings()
-        mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
-        
-        print("Tracking URI:", mlflow.get_tracking_uri())
-        print("Experiments:", mlflow.search_experiments())
+            repo_owner=os.getenv("DAGSHUB_USER"),
+            repo_name="NGForexCast",
+            mlflow=True,
+        )
 
+        mlflow.set_tracking_uri(self.settings.MLFLOW_TRACKING_URI)
         logger.info("MLflow tracking configured")
 
-    def _load_latest_staging_model(self):
-        """
-        Load the latest model pointed to by the 'staging' alias.
-        This guarantees we always use the current promoted model.
-        """
+
+    # Model version helpers
+    def _get_staged_model_version(self) -> str:
+        """Return MLflow version currently pointed to by 'staging' alias."""
+        mv = self.client.get_model_version_by_alias(
+            name=self.model_name,
+            alias="staging",
+        )
+        return mv.version
+
+    def _get_local_model_version(self) -> str:
+        if not self.meta_path.exists():
+            return None
+
+        with open(self.meta_path, "r") as f:
+            meta = json.load(f)
+
+        return meta.get("mlflow_version")
+
+    def _save_model_meta(self, model_version):
+    
+
+        meta = {
+            "model_name": self.model_name,
+            "mlflow_version": model_version,
+        }
+
+        with open(self.meta_path, "w") as f:
+            json.dump(meta, f, indent=2)
+
+        logger.info(f"Saved model metadata: {meta}")
+
+    
+    # version-aware model loading
+    def _load_pipeline(self):
+        staged_version = self._get_staged_model_version()
+        local_version = self._get_local_model_version()
+
+        logger.info(f"Staged model version: {staged_version}")
+        logger.info(f"Local model version: {local_version}")
+
+        # Case 1: Local model exists and is up-to-date
+        if (
+            self.local_model_path.exists()
+            and local_version == staged_version
+        ):
+            logger.info("Using cached local inference pipeline")
+            return joblib.load(self.local_model_path)
+
+        # Case 2: Version mismatch or missing local model → download
+        logger.info("Local model missing or outdated — downloading from MLflow")
+
         model_uri = f"models:/{self.model_name}@staging"
-        logger.info(f"Loading model from MLflow Registry: {model_uri}")
+        pipeline = mlflow.sklearn.load_model(model_uri)
 
-        try:
-            return mlflow.sklearn.load_model(model_uri)
-        except Exception as e:
-            logger.exception("Failed to load staging model")
-            raise RuntimeError(
-                f"Could not load model '{self.model_name}' because of error: {str(e)}"
-            ) from e
+        joblib.dump(pipeline, self.local_model_path)
+        self._save_model_meta(staged_version)
+
+        logger.info(
+            f"Downloaded and cached model version {staged_version}"
+        )
+
+        return pipeline
 
 
+    # Prediction API
     def recursive_forecast(self, steps: int = 12):
         """
-        Fully recursive autoregressive multi-step forecast.
-        Always uses the latest staged model at call time.
+        Recursive autoregressive multi-step forecast.
+        Uses version-aware cached inference pipeline.
         """
-        # Load model at call time (not at init)
-        pipeline = self._load_latest_staging_model()
+        pipeline = self._load_pipeline()
 
         logger.info("Loading raw data from database")
         history = fetch_exchange_rates().copy()
@@ -78,27 +130,30 @@ class ForexInference:
         forecasts = []
 
         logger.info(f"Starting recursive forecasting for {steps} steps")
-        for i in range(steps):
-            # Predict next step
-            y_next = pipeline.predict(history)[-1]
 
+        for i in range(steps):
+            y_next = pipeline.predict(history)[-1]
             next_date = history["date"].max() + timedelta(days=7)
 
             history = pd.concat(
                 [
                     history,
-                    pd.DataFrame({"date": [next_date], "rate": [y_next]})
+                    pd.DataFrame(
+                        {"date": [next_date], "rate": [y_next]}
+                    ),
                 ],
-                ignore_index=True
+                ignore_index=True,
             )
 
-            forecasts.append({
-                "date": next_date.strftime("%Y-%m-%d"),
-                "prediction": float(y_next)
-            })
+            forecasts.append(
+                {
+                    "date": next_date.strftime("%Y-%m-%d"),
+                    "prediction": float(y_next),
+                }
+            )
 
             logger.info(
-                f"Step {i + 1}/{steps}: Predicted {y_next:.6f} for {next_date.date()}"
+                f"Step {i + 1}/{steps}: {y_next:.6f} @ {next_date.date()}"
             )
 
         logger.info("Recursive forecasting completed")
@@ -107,9 +162,7 @@ class ForexInference:
 
 if __name__ == "__main__":
     inferencer = ForexInference()
-    results = inferencer.recursive_forecast(steps=12)
-    print(results)
-
+    print(inferencer.recursive_forecast(steps=12))
 
 
 ### Prediction code without MLflow but with local model (for reference, not used in final version)   
