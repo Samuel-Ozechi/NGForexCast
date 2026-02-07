@@ -15,7 +15,6 @@ from src.data.ingest import fetch_exchange_rates
 import dagshub
 from mlflow.tracking import MlflowClient
 
-
 settings = Settings()
 PROD_PATH = settings.PROD_PATH
 MODEL_PATH = settings.MODEL_PATH
@@ -101,6 +100,11 @@ def _save_model_meta(model_version):
         json.dump(meta, f, indent=2)
 
     logger.info(f"Saved model metadata: {meta}")
+
+def _load_mlflow_model():
+    model_uri = f"models:/{settings.MODEL_NAME}@staging"
+    pipeline = mlflow.sklearn.load_model(model_uri)
+    return pipeline
 
 def get_predictions(df: pd.DataFrame, pipeline: BaseEstimator) -> pd.DataFrame:
     """
