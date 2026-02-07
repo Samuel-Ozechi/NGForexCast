@@ -1,6 +1,4 @@
 {
-  "model_name": "LinearRegression",
-  "mlflow_version": "1",
-  "MAE": 453.6955930191646,
-  "promoted_at": "2026-02-06T01:32:06.445533+00:00"
+  "model_name": "ngn_us_exchange_model",
+  "mlflow_version": "1"
 }
