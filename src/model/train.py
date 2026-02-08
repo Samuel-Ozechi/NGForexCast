@@ -237,6 +237,8 @@ def run_train():
             # log metadata
             mlflow.log_dict({"model_name": best_name, "params": best_overall["params"]}, "model_meta.json")
             mlflow.log_artifact(temp_plot_path, artifact_path="plots")
+            mlflow.log_artifact(scope_path,artifact_path="data_scope")
+
 
             # Define an input example (just a small slice of our training data)
             # We use X_engineered because final_preproc_and_model is fitted on it
