@@ -14,6 +14,7 @@ import logging
 from src.data.ingest import fetch_exchange_rates
 import dagshub
 from mlflow.tracking import MlflowClient
+from pathlib import Path
 
 settings = Settings()
 PROD_PATH = settings.PROD_PATH
@@ -138,7 +139,6 @@ def build_reference_drift_profile(df: pd.DataFrame, pipeline: BaseEstimator) -> 
     reference_df = get_predictions(df, pipeline)
 
     # Save the actual data so drift.py can read it later
-    
     ref_data_path = settings.REFERENCE_DATA_PATH
     ref_data_path .parent.mkdir(parents=True, exist_ok=True)
     reference_df.to_csv(ref_data_path, index=False)
@@ -219,14 +219,39 @@ def save_data_scope(df: pd.DataFrame) -> dict:
     logger.info(f"Data scope saved: {scope['start_date']} to {scope['end_date']}")
     return scope
 
-def get_prediction_data():
-    # Load the training scope
-    with open(RAW_DATA_DIR / "data_scope.json", "r") as f:
-        scope = json.load(f)
-    
-    test_start_date = pd.to_datetime(scope["start_date"]) + pd.Timedelta(days=1)
+def load_data_scope() -> dict:
+    """
+    Retrieve data_scope.json for the currently staged model
+    without requiring a run_id.
+    """
+    _setup_mlflow()
+    client = MlflowClient()
 
-    data = fetch_exchange_rates(start_date=test_start_date.strftime("%Y-%m-%d"))
+    # get staged model version and run id
+    model_version = client.get_model_version_by_alias(
+        name=settings.MODEL_NAME,
+        alias="staging",
+    )
+    run_id = model_version.run_id
 
-    return data
+    logger.info(
+        f"Fetching data_scope.json from run_id={run_id} "
+        f"(model v{model_version.version})"
+    )
 
+    data_scope_dir = settings.RAW_DATA_DIR / "data_scope.json"
+    data_scope_dir.parent.mkdir(parents=True, exist_ok=True) # ensure local directory exists
+
+    # download artifact
+    client.download_artifacts(
+        run_id=run_id,
+        path="data_scope/data_scope.json",
+        dst_path=str(settings.RAW_DATA_DIR),
+    )
+
+    # load and return data scope
+    with open(data_scope_dir) as f:
+        return json.load(f)
+
+if __name__ == "__main__":
+    print(load_data_scope())
