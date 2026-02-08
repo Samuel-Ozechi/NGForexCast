@@ -66,7 +66,6 @@ class ForexInference:
 
         return pipeline
 
-
     # Prediction API
     def recursive_forecast(self, steps: int = 12):
         """
