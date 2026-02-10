@@ -1,22 +1,27 @@
-# 1. Base Image
 FROM python:3.9-slim
 
-# 2. System Dependencies (Essential for LightGBM)
+# System deps (lightweight but sufficient)
 RUN apt-get update && apt-get install -y \
-    libgomp1 \
+    build-essential \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# 3. Setup App Directory
+# Prevent Python buffering issues
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Working directory
 WORKDIR /app
 
-# 4. Install Python Dependencies
-# Make sure your requirements.txt includes uvicorn, fastapi, lightgbm, joblib, etc.
+# Install dependencies first (cache-friendly)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 5. Copy Project Code
+# Copy project code
 COPY . .
 
-# 6. Default command for the API (Prefect will override this automatically)
+# Expose FastAPI port
 EXPOSE 8000
-CMD ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Run API
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
