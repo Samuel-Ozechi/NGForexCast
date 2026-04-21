@@ -40,7 +40,7 @@ def store_exchange_rate(date, rate):
     conn.commit()
     cur.close()
     conn.close()
-    print(f"✅ Stored {date}: {rate} into the database.")
+    print(f"Stored {date}: {rate} into the database.")
 
 def main():
     date, rate = fetch_exchange_rate()
