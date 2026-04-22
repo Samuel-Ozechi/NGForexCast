@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from src.model.predict import ForexInference
+from src.data.ingest import fetch_exchange_rates
 
 app = FastAPI(title="NGN Forex Forecast API")
 
@@ -15,6 +16,13 @@ class ForecastRequest(BaseModel):
 @app.get("/")
 def health():
     return {"status": "online"}
+
+
+@app.get("/historical-rates")
+def historical_rates(start_date=None, end_date=None):
+    historical_rates = fetch_exchange_rates(start_date, end_date)
+    historical_rates_json  = historical_rates.to_json()
+    return historical_rates_json
 
 
 @app.post("/forecast")
